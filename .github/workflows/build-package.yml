@@ -1,0 +1,63 @@
+# Fork-only: build the standalone npm package (.tgz) so it can be installed
+# with `npm install --global <file>.tgz` on a machine that never runs the build
+# toolchain itself. Not part of upstream CI.
+name: Build package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - office-tweaks
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate protocol types
+        run: npm run asyncapi:generate
+
+      - name: Type check
+        run: npm run check-types
+
+      - name: Lint (reported, does not block the package)
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Unit tests (reported, do not block the package)
+        continue-on-error: true
+        run: npm test
+
+      - name: Build
+        run: |
+          node esbuild.js --production
+          npm run build:webview
+
+      - name: Pack
+        run: |
+          npm pack --ignore-scripts
+          ls -l *.tgz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pixel-agents-package
+          path: '*.tgz'
+          if-no-files-found: error
+          retention-days: 30
