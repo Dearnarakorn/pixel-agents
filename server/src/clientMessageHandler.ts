@@ -7,7 +7,6 @@ import type { AgentRuntime } from './agentRuntime.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import type { LoadedAssets, LoadedCharacterSprites, LoadedPetSprites } from './assetLoader.js';
 import { cardOrderMessage, saveCardOrder } from './cardOrder.js';
-import { agentTitles, agentZones } from './officeExtras.js';
 import {
   characterProfilesLoadedMessage,
   handleCharacterProfilesClientMessage,
@@ -38,6 +37,7 @@ import {
 import { collectDirectorySuggestions } from './directorySuggestions.js';
 import { hostDirectory } from './hostDirectory.js';
 import { readLayoutFromFile, writeLayoutToFile } from './layoutPersistence.js';
+import { agentTitles, agentZones } from './officeExtras.js';
 import { getPaletteCount } from './paletteAssigner.js';
 import type { ConsentEffects } from './providers/hook/consentExecutor.js';
 import { applyConsentChoice } from './providers/hook/consentExecutor.js';

@@ -100,9 +100,12 @@ export function reconcileExistingAgents(
       seatId: m?.seatId,
       directoryName: directoryNames[id],
       isHeadless: headlessAgents[id] === true,
-      title: extras.titles?.[id],
-      zone: extras.zones?.[id],
     };
+    // Only set when known, so an agent without them stays the plain record it was.
+    const title = extras.titles?.[id];
+    const zone = extras.zones?.[id];
+    if (title) p.title = title;
+    if (zone) p.zone = zone;
     if (layoutReady) {
       if (!os.characters.has(p.id)) {
         restoreAgent(os, p);
