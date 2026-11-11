@@ -30,12 +30,15 @@ export interface PendingAgent {
   title?: string;
   /** The project group (layout Area label) the agent is seated in. */
   zone?: string;
+  /** The link that opens the agent's session in its CLI's own app. */
+  link?: string;
 }
 
 /** Per-agent extras of the existingAgents message, keyed by agent id. */
 export interface ExistingAgentExtras {
   titles?: Record<number, string>;
   zones?: Record<number, string>;
+  links?: Record<number, string>;
 }
 
 /** Minimal structural view of OfficeState this reconciler needs. */
@@ -53,6 +56,7 @@ export interface ExistingAgentsOffice {
   ) => void;
   /** Optional so older test doubles of this interface stay valid. */
   setAgentTitle?: (id: number, title: string | undefined) => void;
+  setAgentLink?: (id: number, link: string | undefined) => void;
   setHeadless: (id: number, headless: boolean) => void;
   /** Start an agent at rest: not working, resting in its chair if it has one. */
   restAgent: (id: number) => void;
@@ -68,6 +72,7 @@ export interface ExistingAgentsOffice {
 export function restoreAgent(os: ExistingAgentsOffice, p: PendingAgent): void {
   os.addAgent(p.id, p.palette, p.repeat, p.seatId, true, p.directoryName, undefined, p.zone);
   if (p.title) os.setAgentTitle?.(p.id, p.title);
+  if (p.link) os.setAgentLink?.(p.id, p.link);
   if (p.isHeadless) os.setHeadless(p.id, true);
   os.restAgent(p.id);
 }
@@ -104,8 +109,10 @@ export function reconcileExistingAgents(
     // Only set when known, so an agent without them stays the plain record it was.
     const title = extras.titles?.[id];
     const zone = extras.zones?.[id];
+    const link = extras.links?.[id];
     if (title) p.title = title;
     if (zone) p.zone = zone;
+    if (link) p.link = link;
     if (layoutReady) {
       if (!os.characters.has(p.id)) {
         restoreAgent(os, p);
@@ -116,6 +123,7 @@ export function reconcileExistingAgents(
         // office for every other viewer.
         os.syncAgent(p.id, p.palette, p.repeat, p.seatId);
         if (p.title) os.setAgentTitle?.(p.id, p.title);
+        if (p.link) os.setAgentLink?.(p.id, p.link);
       }
     } else {
       pending.push(p);

@@ -214,6 +214,11 @@ export interface HookProvider {
    *  recent conversations; undefined = this provider names no conversations
    *  (and is never asked to resume one). */
   conversationTitle?(transcriptPath: string): string | undefined;
+  /** A link (a custom URL scheme of the CLI's own app) that brings the session
+   *  to the front there, or undefined when this id cannot be linked. The office
+   *  opens it when an agent without a terminal is clicked a second time.
+   *  Undefined method = this provider has no such app. */
+  sessionLink?(sessionId: string): string | undefined;
 
   /** Optional account-usage reporting (the office's usage bars). */
   readonly usageBridge?: UsageBridge;

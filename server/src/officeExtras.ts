@@ -75,6 +75,31 @@ export function attachTitlesToStatus(store: AgentStateStore): void {
   };
 }
 
+// ── Session links ────────────────────────────────────────────
+
+/** A link that opens the agent's session in its CLI's own app, when the
+ *  provider has one. External agents only: an agent the office launched has a
+ *  terminal here, which is where a click on it leads. */
+export function agentLink(agent: AgentState): string | undefined {
+  if (!agent.isExternal || !agent.jsonlFile) return undefined;
+  const sessionId = path.basename(agent.jsonlFile, path.extname(agent.jsonlFile));
+  try {
+    return getHookProvider()?.sessionLink?.(sessionId);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Links of every agent that has one, keyed by agent id (for `existingAgents`). */
+export function agentLinks(store: AgentStateStore): Record<number, string> {
+  const links: Record<number, string> = {};
+  for (const [id, agent] of store) {
+    const link = agentLink(agent);
+    if (link) links[id] = link;
+  }
+  return links;
+}
+
 // ── Project groups (zones) ───────────────────────────────────
 
 type ZoneRule = [pattern: RegExp, zone: string];

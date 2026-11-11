@@ -51,6 +51,7 @@ import { overlayProjection } from './office/projection.js';
 import { getPetCount } from './office/sprites/petSpriteData.js';
 import { EditTool, type OfficeLayout, TILE_SIZE } from './office/types.js';
 import { isBrowserRuntime, isE2E } from './runtime.js';
+import { openSessionLink } from './sessionLink.js';
 import { installTestHooks } from './testHooks.js';
 import { transport } from './transport/index.js';
 import { UsageBars } from './usage/UsageBars.js';
@@ -377,6 +378,18 @@ function App() {
     transport.send({ type: 'closeAgent', id });
   }, []);
 
+  // An agent with no terminal here (a session running in its CLI's own app):
+  // the first click selects it, a second click on the same agent follows its
+  // session link, bringing that session to the front in the app. Two steps so
+  // that selecting a character never pulls focus away from the office.
+  const lastClickedAgentRef = useRef<number | null>(null);
+  const openLinkOnSecondClick = useCallback((agentId: number) => {
+    const repeated = lastClickedAgentRef.current === agentId;
+    lastClickedAgentRef.current = agentId;
+    const link = getOfficeState().characters.get(agentId)?.link;
+    if (repeated && link) openSessionLink(link);
+  }, []);
+
   const { reveal: revealTerminal } = terminalDrawer;
   const handleClick = useCallback(
     (agentId: number) => {
@@ -395,9 +408,11 @@ function App() {
       if (terminalAgentIds.includes(terminalId)) {
         revealTerminal(terminalId);
         if (isMobile) showMobileTerminal();
+      } else {
+        openLinkOnSecondClick(focusId);
       }
     },
-    [terminalAgentIds, isMobile, revealTerminal, showMobileTerminal],
+    [terminalAgentIds, isMobile, revealTerminal, showMobileTerminal, openLinkOnSecondClick],
   );
 
   // Desktop card click. A card with a terminal pane is its tab: show that
@@ -414,8 +429,9 @@ function App() {
       }
       transport.send({ type: 'focusAgent', id: agentId });
       getOfficeState().selectAndFollow(agentId);
+      openLinkOnSecondClick(agentId);
     },
-    [terminalAgentIds, selectTerminal],
+    [terminalAgentIds, selectTerminal, openLinkOnSecondClick],
   );
 
   // A running conversation pressed in the desktop sidebar: its agent, as its

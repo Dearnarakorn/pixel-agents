@@ -25,6 +25,7 @@ import {
 } from './constants.js';
 import { conversationTitle } from './conversationTitle.js';
 import { isInheritedClaudeSessionEnv } from './sessionEnv.js';
+import { sessionLink } from './sessionLink.js';
 
 // ── formatToolStatus: moved from src/transcriptParser.ts ──
 
@@ -347,6 +348,7 @@ export const claudeProvider: HookProvider = {
   buildLaunchCommand,
   isInheritedSessionEnv: isInheritedClaudeSessionEnv,
   conversationTitle,
+  sessionLink,
 
   team: claudeTeamProvider,
   usageBridge: claudeUsageBridge,

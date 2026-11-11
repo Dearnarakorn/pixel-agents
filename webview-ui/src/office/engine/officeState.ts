@@ -705,6 +705,12 @@ export class OfficeState {
     return false;
   }
 
+  /** The link that opens an agent's session in its CLI's own app. */
+  setAgentLink(agentId: number, link: string | undefined): void {
+    const ch = this.characters.get(agentId);
+    if (ch) ch.link = link;
+  }
+
   /** The conversation title drawn on an agent's label (undefined clears it). */
   setAgentTitle(agentId: number, title: string | undefined): void {
     const ch = this.characters.get(agentId);

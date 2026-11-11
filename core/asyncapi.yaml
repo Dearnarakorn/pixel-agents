@@ -233,6 +233,12 @@ components:
           description: >-
             The agent's project group: a layout Area label the office seats it
             in while a seat there is free (rules in ~/.pixel-agents/zones.json).
+        link:
+          type: string
+          description: >-
+            A custom-scheme URL that brings the agent's session to the front in
+            its CLI's own app. The office follows it when an agent without a
+            terminal is clicked while already selected.
 
     AgentClosed:
       description: An agent has been removed from the office.
@@ -293,6 +299,11 @@ components:
         zones:
           type: object
           description: Map of agent ID (string) to project group (agents that have one).
+          additionalProperties:
+            type: string
+        links:
+          type: object
+          description: Map of agent ID (string) to session link (agents that have one).
           additionalProperties:
             type: string
 

@@ -460,6 +460,7 @@ export function useExtensionMessages(
           const zone = typeof msg.zone === 'string' ? msg.zone : undefined;
           os.addAgent(id, palette, repeat, seatId, undefined, directoryName, undefined, zone);
           if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
+          if (typeof msg.link === 'string') os.setAgentLink(id, msg.link);
           noteDirectoryName(directoryName);
           if (isHeadlessAgent(msg.isExternal as boolean | undefined)) {
             os.setHeadless(id, true);
@@ -479,6 +480,7 @@ export function useExtensionMessages(
         const externalAgents = (msg.externalAgents || {}) as Record<number, boolean>;
         const titles = (msg.titles || {}) as Record<number, string>;
         const zones = (msg.zones || {}) as Record<number, string>;
+        const links = (msg.links || {}) as Record<number, string>;
         // Every group label first: an agent with no group must already know
         // which Areas belong to groups when it is seated.
         for (const zone of Object.values(zones)) os.zoneLabels.add(zone);
@@ -500,7 +502,7 @@ export function useExtensionMessages(
             layoutReadyRef.current,
             pendingAgents,
             headlessAgents,
-            { titles, zones },
+            { titles, zones, links },
           )
         ) {
           saveAgentSeats(os);

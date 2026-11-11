@@ -239,6 +239,9 @@ export interface Character extends Blinker {
   /** The conversation's title as the CLI shows it; drawn on the label in
    *  place of the Directory name when the server knows one. */
   title?: string;
+  /** A link that opens this agent's session in its CLI's own app (a custom
+   *  URL scheme); followed when the agent is clicked while already selected. */
+  link?: string;
   /** Project group (a layout Area label) the server sorted this agent into;
    *  it is seated in that Area while a seat there is free. */
   zone?: string;

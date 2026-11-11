@@ -1,4 +1,4 @@
-import { agentTitle, agentZone } from './officeExtras.js';
+import { agentLink, agentTitle, agentZone } from './officeExtras.js';
 import type { AgentState } from './types.js';
 
 /**
@@ -22,5 +22,6 @@ export function agentCreatedMessage(id: number, agent: AgentState): Record<strin
     seatId: agent.seatId,
     title: agentTitle(agent),
     zone: agentZone(agent),
+    link: agentLink(agent),
   };
 }
