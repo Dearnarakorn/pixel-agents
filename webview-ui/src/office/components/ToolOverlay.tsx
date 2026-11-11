@@ -130,10 +130,14 @@ export function ToolOverlay({
   alwaysShowOverlay,
 }: ToolOverlayProps) {
   const [, setTick] = useState(0);
+  // Wall-clock time of the last frame, for the "Done · 5m" labels: read in the
+  // frame callback, never during render. 0 until the first frame.
+  const [now, setNow] = useState(0);
   useEffect(() => {
     let rafId = 0;
     const tick = () => {
       setTick((n) => n + 1);
+      setNow(Date.now());
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
@@ -290,7 +294,7 @@ export function ToolOverlay({
             } else if (officeState.errored.has(id)) {
               activityText = ERROR_ACTIVITY_TEXT;
             } else if (since !== undefined) {
-              activityText = doneActivityText(Date.now() - since);
+              activityText = doneActivityText(now - since);
             }
           }
         }
