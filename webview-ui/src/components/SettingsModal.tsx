@@ -1,5 +1,6 @@
 import { type CSSProperties, useRef, useState } from 'react';
 
+import { isCameraFollowEnabled, setCameraFollowEnabled } from '../cameraFollow.js';
 import { NOTIFICATION_VOLUME_STEP_PCT } from '../constants.js';
 import { officeRadio } from '../music/musicEngine.js';
 import { useOfficeRadio } from '../music/useOfficeRadio.js';
@@ -84,6 +85,7 @@ export function SettingsModal({
   const radio = useOfficeRadio();
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled);
   const [volumePct, setVolumePct] = useState(getNotificationVolumePct);
+  const [cameraFollow, setCameraFollow] = useState(isCameraFollowEnabled);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [assetDirDraft, setAssetDirDraft] = useState('');
   // Usage Bars: installing rewrites the user's status line, so it asks first
@@ -236,6 +238,16 @@ export function SettingsModal({
           />
           <PixelText text={`${volumePct}%`} className="w-44 justify-end shrink-0" />
         </label>
+        <Checkbox
+          label="Camera Follows Selection"
+          title="Move the view to an agent when you select it (this browser only)"
+          checked={cameraFollow}
+          onChange={() => {
+            const next = !cameraFollow;
+            setCameraFollowEnabled(next);
+            setCameraFollow(next);
+          }}
+        />
         <Checkbox
           label="Music Player"
           title="The office radio's player, bottom of the office"

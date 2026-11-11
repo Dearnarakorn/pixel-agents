@@ -1,4 +1,5 @@
 import { chooseLook } from '../../../../core/src/paletteUtils.js';
+import { isCameraFollowEnabled } from '../../cameraFollow.js';
 import {
   BEDROOM_AREA_LABELS,
   CHARACTER_HIT_HALF_WIDTH,
@@ -106,7 +107,17 @@ export class OfficeState {
     this.selectionListeners.add(listener);
     return () => this.selectionListeners.delete(listener);
   }
-  cameraFollowId: number | null = null;
+  /** The agent the camera keeps centred, or null. Every place that follows an
+   *  agent assigns here, so the "camera follow" preference is applied in this
+   *  one setter: while it is off, nothing is ever followed. */
+  private followedId: number | null = null;
+  get cameraFollowId(): number | null {
+    // Read through the preference too, so switching it off stops a follow in progress.
+    return isCameraFollowEnabled() ? this.followedId : null;
+  }
+  set cameraFollowId(id: number | null) {
+    this.followedId = id !== null && !isCameraFollowEnabled() ? null : id;
+  }
   hoveredAgentId: number | null = null;
   hoveredTile: { col: number; row: number } | null = null;
   /** Maps "parentId:toolId" → sub-agent character ID (negative) */

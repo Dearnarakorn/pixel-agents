@@ -239,6 +239,8 @@ export const WAITING_BUBBLE_DURATION_SEC = 2.0;
 export const DISMISS_BUBBLE_FAST_FADE_SEC = 0.3;
 export const INACTIVE_SEAT_TIMER_MIN_SEC = 3.0;
 export const INACTIVE_SEAT_TIMER_RANGE_SEC = 2.0;
+/** localStorage key for the "camera follows the selected agent" preference (per browser). */
+export const CAMERA_FOLLOW_STORAGE_KEY = 'pixel-agents.cameraFollow';
 /** Layout Area labels (lower-cased) that make an Area a bedroom: sleeping
  *  agents rest on its seats. */
 export const BEDROOM_AREA_LABELS: readonly string[] = ['bedroom', 'ห้องนอน'];
