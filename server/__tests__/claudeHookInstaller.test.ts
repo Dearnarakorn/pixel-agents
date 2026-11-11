@@ -270,7 +270,9 @@ describe('claudeHookInstaller', () => {
       JSON.stringify({
         permissions: { allow: ['Bash(ls:*)'], deny: ['Read(.env)'] },
         model: 'opus',
-        hooks: { PreToolUse: [thirdParty] },
+        // An event this fork installs (it no longer installs PreToolUse), plus
+        // one it does not: the third-party entry there must be left alone.
+        hooks: { Stop: [thirdParty], PreToolUse: [thirdParty] },
       }),
     );
 
@@ -279,9 +281,10 @@ describe('claudeHookInstaller', () => {
     const settings = readSettings();
     expect(settings.permissions).toEqual({ allow: ['Bash(ls:*)'], deny: ['Read(.env)'] });
     expect(settings.model).toBe('opus');
-    const preToolUse = (settings.hooks as Record<string, unknown[]>)['PreToolUse'];
-    expect(preToolUse).toHaveLength(2);
-    expect(preToolUse[0]).toEqual(thirdParty);
+    const stop = (settings.hooks as Record<string, unknown[]>)['Stop'];
+    expect(stop).toHaveLength(2);
+    expect(stop[0]).toEqual(thirdParty);
+    expect((settings.hooks as Record<string, unknown[]>)['PreToolUse']).toEqual([thirdParty]);
   });
 
   // 8a-3. Identity requires OUR directory, not just the script name:

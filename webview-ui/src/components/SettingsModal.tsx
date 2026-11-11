@@ -1,9 +1,8 @@
-import type { CSSProperties } from 'react';
-import { useRef, useState } from 'react';
+import { type CSSProperties, useRef, useState } from 'react';
 
+import { NOTIFICATION_VOLUME_STEP_PCT } from '../constants.js';
 import { officeRadio } from '../music/musicEngine.js';
 import { useOfficeRadio } from '../music/useOfficeRadio.js';
-import { NOTIFICATION_VOLUME_STEP_PCT } from '../constants.js';
 import {
   getNotificationVolumePct,
   isSoundEnabled,
