@@ -106,13 +106,29 @@ const INTERIM_NOTICE_NOTE = /<note>[^<]*\bmay be interim\b[^<]*<\/note>/;
 /** Background agents' completion notices arrive as an `enqueue`
  *  queue-operation on the lead's transcript, its string content one or more
  *  `<task-notification>`s naming the agent by `<tool-use-id>` (the spawn's),
- *  `<task-id>` (the agent's) or both. A crash notice lists several task ids. */
+ *  `<task-id>` (the agent's) or both. A crash notice lists several task ids.
+ *
+ *  A session continued under a new id starts its transcript with a copy of
+ *  the old one's history, and that copy keeps a notice only as the
+ *  `attachment` record it was delivered in — the queue-operation is not
+ *  carried over. Without reading those, a spawn replayed from the copied
+ *  history never ends and its Sub-agent stays in the office for good. */
 function readSpawnNotices(
   record: Record<string, unknown>,
 ): { notices: SpawnNotice[]; at?: number } | null {
-  if (record.type !== 'queue-operation' || record.operation !== 'enqueue') return null;
-  if (typeof record.content !== 'string') return null;
-  const notices = record.content
+  let text: string;
+  if (record.type === 'queue-operation' && record.operation === 'enqueue') {
+    if (typeof record.content !== 'string') return null;
+    text = record.content;
+  } else if (record.type === 'attachment') {
+    // The attachment's own shape is not ours to depend on: the notice is
+    // markup inside one of its strings, and serializing leaves the tags intact.
+    text = JSON.stringify(record.attachment ?? null);
+    if (!text.includes('<task-notification>')) return null;
+  } else {
+    return null;
+  }
+  const notices = text
     .split('<task-notification>')
     .map((notice) => ({
       toolIds: [...notice.matchAll(/<tool-use-id>(.*?)<\/tool-use-id>/g)].map((m) => m[1]),
