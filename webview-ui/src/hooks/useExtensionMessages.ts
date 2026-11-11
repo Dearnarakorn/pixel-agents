@@ -648,6 +648,7 @@ export function useExtensionMessages(
         if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
         if (status === 'active') {
           os.wakeAgent(id);
+          os.regroupAgent(id);
           os.errored.delete(id);
         } else {
           // A finished turn: when it ended (the server's reading of the

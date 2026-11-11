@@ -682,7 +682,14 @@ export class OfficeState {
       ch.palette = palette;
       ch.repeat = repeat ?? 0;
     }
-    if (seatId !== undefined && seatId !== ch.seatId) {
+    // The server's remembered seat is not followed into the wrong Area, nor
+    // out of bed: where a grouped or sleeping agent sits is decided here.
+    if (
+      seatId !== undefined &&
+      seatId !== ch.seatId &&
+      !ch.inBed &&
+      !this.seatInWrongZone(seatId, ch.zone)
+    ) {
       const seat = this.seats.get(seatId);
       if (seat && !seat.assigned) this.reassignSeat(agentId, seatId);
     }
@@ -705,21 +712,42 @@ export class OfficeState {
     return label !== null && BEDROOM_AREA_LABELS.includes(label.trim().toLowerCase());
   }
 
+  /** A free seat in the Area labelled `zone` (a PC seat first), or null. */
+  private freeSeatInZone(zone: string): string | null {
+    const free: string[] = [];
+    for (const [uid, seat] of this.seats) {
+      if (!seat.assigned && this.seatZone(uid) === zone) free.push(uid);
+    }
+    return this.pickFromSeats(free);
+  }
+
   /**
-   * Whether an agent of project group `zone` should give up a remembered seat:
-   * the seat lies in another group's Area while its own Area has room, or the
-   * agent has no group and the seat lies in some group's Area. Bedroom seats
-   * and seats outside every Area are never "wrong".
+   * Whether an agent of project group `zone` should give up a remembered seat.
+   * With a group: any seat outside its own Area — another group's, or no
+   * Area at all — while its own Area has room. Without a group: a seat in
+   * some group's Area. Bedroom seats are never "wrong".
    */
   private seatInWrongZone(seatId: string, zone: string | undefined): boolean {
+    if (this.isBedSeat(seatId)) return false;
     const label = this.seatZone(seatId);
-    if (label === null || this.isBedSeat(seatId)) return false;
-    if (!zone) return this.zoneLabels.has(label);
+    if (!zone) return label !== null && this.zoneLabels.has(label);
     if (label === zone) return false;
-    for (const [uid, seat] of this.seats) {
-      if (!seat.assigned && this.seatZone(uid) === zone) return true;
-    }
-    return false;
+    return this.freeSeatInZone(zone) !== null;
+  }
+
+  /**
+   * Walk an agent that has a project group back to its own Area when it sits
+   * elsewhere and a seat there is free. Called whenever the agent starts
+   * working, so a seat picked up along the way (a full Area at the time, a
+   * seat remembered from before it had a group) does not stick. Sleepers,
+   * sub-agents and teammates (who sit by their lead) are left alone.
+   */
+  regroupAgent(agentId: number): void {
+    const ch = this.characters.get(agentId);
+    if (!ch || !ch.zone || ch.isSubagent || ch.leadAgentId !== undefined || ch.inBed) return;
+    if (ch.seatId && this.seatZone(ch.seatId) === ch.zone) return;
+    const seat = this.freeSeatInZone(ch.zone);
+    if (seat) this.reassignSeat(agentId, seat);
   }
 
   /** The link that opens an agent's session in its CLI's own app. */
@@ -775,9 +803,17 @@ export class OfficeState {
     ch.seatTimer = 0;
     const home = ch.homeSeatId;
     ch.homeSeatId = undefined;
-    if (home && home !== ch.seatId) {
-      const seat = this.seats.get(home);
-      if (seat && !seat.assigned) this.reassignSeat(agentId, home);
+    const homeSeat = home ? this.seats.get(home) : undefined;
+    if (home && homeSeat && !homeSeat.assigned && !this.seatInWrongZone(home, ch.zone)) {
+      if (home !== ch.seatId) this.reassignSeat(agentId, home);
+      return;
+    }
+    // No seat to go back to (it was taken, it is gone, or the agent was
+    // already in bed when the office loaded): pick one as a new arrival would,
+    // rather than work from the bed.
+    if (this.isBedSeat(ch.seatId)) {
+      const seat = this.findFreeSeat(ch.directoryName, ch.zone);
+      if (seat && !this.isBedSeat(seat)) this.reassignSeat(agentId, seat);
     }
   }
 
