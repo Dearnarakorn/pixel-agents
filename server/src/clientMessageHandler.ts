@@ -37,7 +37,7 @@ import {
 import { collectDirectorySuggestions } from './directorySuggestions.js';
 import { hostDirectory } from './hostDirectory.js';
 import { readLayoutFromFile, writeLayoutToFile } from './layoutPersistence.js';
-import { agentLinks, agentTitles, agentZones } from './officeExtras.js';
+import { agentIdleStates, agentLinks, agentTitles, agentZones } from './officeExtras.js';
 import { getPaletteCount } from './paletteAssigner.js';
 import type { ConsentEffects } from './providers/hook/consentExecutor.js';
 import { applyConsentChoice } from './providers/hook/consentExecutor.js';
@@ -753,6 +753,7 @@ function handleWebviewReady(send: WsSend, ctx: ClientMessageContext): void {
     titles: agentTitles(store),
     zones: agentZones(store),
     links: agentLinks(store),
+    ...agentIdleStates(store),
   });
 
   // 7. Layout last (see step 3): flushes the webview's buffered existingAgents

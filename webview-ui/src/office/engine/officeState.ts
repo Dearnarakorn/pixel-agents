@@ -131,6 +131,12 @@ export class OfficeState {
   /** Area labels the server uses as project groups (every `zone` it has sent).
    *  An agent with no group keeps out of these Areas while other seats are free. */
   readonly zoneLabels = new Set<string>();
+  /** When each agent's last turn ended (ms since epoch, by the server's clock
+   *  of the transcript): the label reads "Done · 5m" from it. Kept by agent id
+   *  rather than on the character, so it holds whichever arrives first. */
+  readonly idleSince = new Map<number, number>();
+  /** Agents whose last turn ended on an error: the label reads "Error". */
+  readonly errored = new Set<number>();
 
   /**
    * The first-run consent greeter, deliberately NOT in `characters`.

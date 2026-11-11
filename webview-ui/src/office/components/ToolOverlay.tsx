@@ -36,6 +36,20 @@ const WAITING_INPUT_ACTIVITY_TEXT = 'Waiting for input';
 const IDLE_ACTIVITY_TEXT = 'Idle';
 /** Shown in place of "Idle" once the server says the agent has slept (Character.sleeping). */
 const SLEEPING_ACTIVITY_TEXT = 'Zzz';
+/** A turn is under way but no tool is running: the model is thinking or writing. */
+const THINKING_ACTIVITY_TEXT = 'Thinking';
+/** The last turn ended on an error the CLI reported, not on an answer. */
+const ERROR_ACTIVITY_TEXT = 'Error';
+const MS_PER_MINUTE = 60_000;
+const MINUTES_PER_HOUR = 60;
+
+/** "Done", then "Done · 5m", "Done · 1h 5m": the last turn finished, and how long ago. */
+function doneActivityText(elapsedMs: number): string {
+  const minutes = Math.floor(Math.max(0, elapsedMs) / MS_PER_MINUTE);
+  if (minutes < 1) return 'Done';
+  if (minutes < MINUTES_PER_HOUR) return `Done · ${minutes}m`;
+  return `Done · ${Math.floor(minutes / MINUTES_PER_HOUR)}h ${minutes % MINUTES_PER_HOUR}m`;
+}
 
 interface ToolOverlayProps {
   officeState: OfficeState;
@@ -265,8 +279,19 @@ export function ToolOverlay({
             ch.bubbleType,
             ch.waitingAwaitingInput ?? false,
           );
-          if (ch.sleeping && activityText === IDLE_ACTIVITY_TEXT) {
-            activityText = SLEEPING_ACTIVITY_TEXT;
+          if (activityText === IDLE_ACTIVITY_TEXT) {
+            // "Idle" says nothing about what the agent last did. Say it:
+            // asleep, mid-turn with no tool running, failed, or finished.
+            const since = officeState.idleSince.get(id);
+            if (ch.sleeping) {
+              activityText = SLEEPING_ACTIVITY_TEXT;
+            } else if (ch.isActive) {
+              activityText = THINKING_ACTIVITY_TEXT;
+            } else if (officeState.errored.has(id)) {
+              activityText = ERROR_ACTIVITY_TEXT;
+            } else if (since !== undefined) {
+              activityText = doneActivityText(Date.now() - since);
+            }
           }
         }
 

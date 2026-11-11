@@ -306,6 +306,16 @@ components:
           description: Map of agent ID (string) to session link (agents that have one).
           additionalProperties:
             type: string
+        idleSince:
+          type: object
+          description: Map of agent ID (string) to when its last turn ended, ms since epoch (agents not mid-turn).
+          additionalProperties:
+            type: number
+        errors:
+          type: object
+          description: Map of agent ID (string) to true for agents whose last turn ended on an error.
+          additionalProperties:
+            type: boolean
 
     AgentStatus:
       description: Active vs waiting state for an agent (drives character animation).
@@ -334,6 +344,16 @@ components:
             True on the periodic notice that the agent has been idle past the
             sleep threshold. Not an activity change: the office labels it
             "Zzz" and rests it in a bedroom Area; the next "active" wakes it.
+        idleSince:
+          type: number
+          description: >-
+            With status "waiting": when the turn ended, ms since epoch (the
+            transcript's last write). The office labels the agent "Done · 5m".
+        error:
+          type: boolean
+          description: >-
+            With status "waiting": the turn ended on an error the CLI reported
+            (rate limit, overload…), not on an answer. The office labels it "Error".
 
     AgentActivityStatus:
       description: Activity state of an agent.

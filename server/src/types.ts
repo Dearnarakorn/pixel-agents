@@ -26,6 +26,9 @@ export interface AgentState {
    *  yet 'waiting'), so a connecting client is told too: a turn between two
    *  tools has no live tool to say so. Unset for an agent with no turn seen. */
   turnActive?: boolean;
+  /** The last turn ended on an error the CLI reported (rate limit, overload…)
+   *  rather than on an answer. Cleared when the next prompt starts a turn. */
+  turnErrored?: boolean;
   permissionSent: boolean;
   hadToolsInTurn: boolean;
   /** Directory name — the agent's origin label (only set for multi-root workspaces) */

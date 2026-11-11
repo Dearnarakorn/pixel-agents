@@ -70,9 +70,45 @@ export function attachTitlesToStatus(store: AgentStateStore): void {
       const agent = store.get(message.id);
       const title = agent ? agentTitle(agent) : undefined;
       if (title) message.title = title;
+      // A finished turn says when it finished and whether it failed, so the
+      // office can label it "Done · 5m" or "Error" instead of a bare "Idle".
+      if (agent && message.status === 'waiting' && message.sleeping !== true) {
+        message.idleSince = agentIdleSince(agent) ?? Date.now();
+        if (agent.turnErrored) message.error = true;
+      }
     }
     broadcast(message);
   };
+}
+
+// ── Finished turns ───────────────────────────────────────────
+
+/** When the agent's transcript was last written (ms since epoch) — the moment
+ *  its last turn ended, for an agent that is not in one. */
+function agentIdleSince(agent: AgentState): number | undefined {
+  if (!agent.jsonlFile) return undefined;
+  try {
+    return fs.statSync(agent.jsonlFile).mtimeMs;
+  } catch {
+    return undefined;
+  }
+}
+
+/** For `existingAgents`: when each agent that is not mid-turn went quiet, and
+ *  which of them ended their last turn on an error. Keyed by agent id. */
+export function agentIdleStates(store: AgentStateStore): {
+  idleSince: Record<number, number>;
+  errors: Record<number, boolean>;
+} {
+  const idleSince: Record<number, number> = {};
+  const errors: Record<number, boolean> = {};
+  for (const [id, agent] of store) {
+    if (agent.turnActive) continue;
+    const since = agentIdleSince(agent);
+    if (since !== undefined) idleSince[id] = since;
+    if (agent.turnErrored) errors[id] = true;
+  }
+  return { idleSince, errors };
 }
 
 // ── Session links ────────────────────────────────────────────

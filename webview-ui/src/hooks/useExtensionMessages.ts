@@ -481,6 +481,12 @@ export function useExtensionMessages(
         const titles = (msg.titles || {}) as Record<number, string>;
         const zones = (msg.zones || {}) as Record<number, string>;
         const links = (msg.links || {}) as Record<number, string>;
+        for (const [id, since] of Object.entries((msg.idleSince || {}) as Record<string, number>)) {
+          os.idleSince.set(Number(id), since);
+        }
+        for (const id of Object.keys((msg.errors || {}) as Record<string, boolean>)) {
+          os.errored.add(Number(id));
+        }
         // Every group label first: an agent with no group must already know
         // which Areas belong to groups when it is seated.
         for (const zone of Object.values(zones)) os.zoneLabels.add(zone);
@@ -640,7 +646,17 @@ export function useExtensionMessages(
         const id = msg.id as number;
         const status = msg.status as string;
         if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
-        if (status === 'active') os.wakeAgent(id);
+        if (status === 'active') {
+          os.wakeAgent(id);
+          os.errored.delete(id);
+        } else {
+          // A finished turn: when it ended (the server's reading of the
+          // transcript; a resend carries none, so keep what is known) and
+          // whether it failed.
+          const since = typeof msg.idleSince === 'number' ? msg.idleSince : os.idleSince.get(id);
+          os.idleSince.set(id, since ?? Date.now());
+          if (msg.error === true) os.errored.add(id);
+        }
         markSeenActivity(id);
         setAgentStatuses((prev) => {
           if (status === 'active') return omitKey(prev, id);

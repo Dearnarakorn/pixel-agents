@@ -3,7 +3,11 @@ const debug = process.env.PIXEL_AGENTS_DEBUG !== '0';
 import type { HookProvider } from '../../core/src/provider.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import { launchSpawn, readCompletionNotices } from './backgroundSpawns.js';
-import { TEXT_IDLE_DELAY_MS, TOOL_DONE_DELAY_MS } from './constants.js';
+import {
+  TEXT_IDLE_DELAY_MS,
+  THINKING_SILENCE_TIMEOUT_MS,
+  TOOL_DONE_DELAY_MS,
+} from './constants.js';
 import { updateContextUsage } from './contextUsage.js';
 import { hasInlineTeammates, hasPromotedBackgroundAgent } from './teamUtils.js';
 import {
@@ -31,6 +35,36 @@ function exemptTools(): ReadonlySet<string> {
 function isSubagentTool(toolName: string | null | undefined): boolean {
   if (!toolName || !hookProvider) return false;
   return hookProvider.subagentToolNames.has(toolName);
+}
+
+/** User records the CLI writes for its own bookkeeping — a slash command and
+ *  its output, a compaction summary — which no model turn answers. */
+const NOT_A_PROMPT = /^\s*<(local-command-[a-z]+|command-name|command-message)>/;
+
+/**
+ * A prompt has reached the model: the turn is under way from here, not from
+ * its first tool call. Marks the agent active so the office shows it working
+ * ("Thinking") through a text-only answer and before the first tool.
+ *
+ * Without hooks nothing reports a turn that ends without output (a cancelled
+ * prompt, a prompt the CLI handled itself), so a long silence ends the wait.
+ */
+function beginTurn(
+  agentId: number,
+  agent: AgentState,
+  record: Record<string, unknown>,
+  text: string,
+  agents: AgentStateStore,
+  waitingTimers: Map<number, ReturnType<typeof setTimeout>>,
+): void {
+  if (!text.trim() || NOT_A_PROMPT.test(text) || record.isCompactSummary === true) return;
+  agent.turnErrored = false;
+  agent.isWaiting = false;
+  agent.turnActive = true;
+  agents.broadcast({ type: 'agentStatus', id: agentId, status: 'active' });
+  if (!agent.hookDelivered) {
+    startWaitingTimer(agentId, THINKING_SILENCE_TIMEOUT_MS, agents, waitingTimers);
+  }
 }
 
 /** Register the HookProvider that owns CLI-specific formatting and team metadata extraction. */
@@ -166,6 +200,21 @@ export function processTranscriptLine(
     // Resilient content extraction: support both record.message.content and record.content
     // Claude Code may change the JSONL structure across versions
     const assistantContent = record.message?.content ?? record.content;
+
+    // The CLI gave up on the request (rate limit, overload, auth…) and wrote
+    // its error as a synthetic assistant message. That is the end of the turn,
+    // and no turn_duration follows it: say so now, marked as an error, so the
+    // office does not show a failed turn as "Done".
+    if (record.type === 'assistant' && record.isApiErrorMessage === true) {
+      cancelWaitingTimer(agentId, waitingTimers);
+      cancelPermissionTimer(agentId, permissionTimers);
+      agent.turnErrored = true;
+      agent.isWaiting = true;
+      agent.turnActive = false;
+      agent.hadToolsInTurn = false;
+      agents.broadcast({ type: 'agentStatus', id: agentId, status: 'waiting', awaitingInput: false });
+      return;
+    }
 
     if (record.type === 'assistant' && Array.isArray(assistantContent)) {
       const blocks = assistantContent as Array<{
@@ -435,12 +484,17 @@ export function processTranscriptLine(
           cancelWaitingTimer(agentId, waitingTimers);
           clearAgentActivity(agent, agentId, agents, permissionTimers);
           agent.hadToolsInTurn = false;
+          const text = (content as Array<{ type?: string; text?: unknown }>)
+            .map((b) => (b.type === 'text' && typeof b.text === 'string' ? b.text : ''))
+            .join('\n');
+          beginTurn(agentId, agent, record, text, agents, waitingTimers);
         }
       } else if (typeof content === 'string' && content.trim()) {
         // New user text prompt — new turn starting
         cancelWaitingTimer(agentId, waitingTimers);
         clearAgentActivity(agent, agentId, agents, permissionTimers);
         agent.hadToolsInTurn = false;
+        beginTurn(agentId, agent, record, content, agents, waitingTimers);
       }
     } else if (spawnNotices) {
       // Background agents finished. A notice names them by spawn tool id, by

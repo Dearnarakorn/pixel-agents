@@ -39,6 +39,10 @@ export const AGENT_REMOVE_AFTER_HOURS = 24;
  *  the same conversation title (a chat that continued under a new session id
  *  leaves its old transcript behind). */
 export const DUPLICATE_TITLE_IDLE_MS = 300_000;
+/** Without hooks: how long a transcript may stay silent after a prompt before
+ *  the turn is taken as over. Long, because a model can think for minutes
+ *  before its first record; it only has to end a turn that never answers. */
+export const THINKING_SILENCE_TIMEOUT_MS = 180_000;
 /** File under ~/.pixel-agents holding the project-group rules. */
 export const ZONES_FILE_NAME = 'zones.json';
 /** How long a read of that file is reused before it is read again. */
