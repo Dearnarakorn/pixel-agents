@@ -1,3 +1,4 @@
+import { agentTitle, agentZone } from './officeExtras.js';
 import type { AgentState } from './types.js';
 
 /**
@@ -19,5 +20,7 @@ export function agentCreatedMessage(id: number, agent: AgentState): Record<strin
     palette: agent.palette,
     repeat: agent.repeat,
     seatId: agent.seatId,
+    title: agentTitle(agent),
+    zone: agentZone(agent),
   };
 }

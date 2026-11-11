@@ -31,20 +31,21 @@ export const LEGACY_HOOK_SCRIPT_NAME = 'pixel-agents-hook.js';
  *  to null (nothing in the runtime consumes them), so installing them only
  *  forwarded the user's prompt text and task payloads to the server to be
  *  dropped. A legacy install that still carries them is migrated on the next
- *  install (see installEntries' unlisted-event sweep). */
+ *  install (see installEntries' unlisted-event sweep).
+ *
+ *  This fork also leaves out the per-tool-call events (PreToolUse, PostToolUse,
+ *  PostToolUseFailure) and the Agent Teams ones (SubagentStart, SubagentStop,
+ *  TeammateIdle, TaskCompleted): a hook is one process spawn per event, and the
+ *  tool events fire twice per tool call. Tool activity keeps coming from the
+ *  transcript; the five below still give instant turn-end, permission and
+ *  session start/end. The same sweep removes the dropped events from an
+ *  existing install. */
 export const CLAUDE_HOOK_EVENTS = [
   'SessionStart',
   'SessionEnd',
   'Stop',
   'PermissionRequest',
   'Notification',
-  'PreToolUse',
-  'PostToolUse',
-  'PostToolUseFailure',
-  'SubagentStart',
-  'SubagentStop',
-  'TeammateIdle',
-  'TaskCompleted',
 ] as const;
 
 /** Suffix of the one-time pre-modification backup of settings.json. Brand-named

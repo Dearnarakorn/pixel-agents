@@ -1,5 +1,6 @@
 import { chooseLook } from '../../../../core/src/paletteUtils.js';
 import {
+  BEDROOM_AREA_LABELS,
   CHARACTER_HIT_HALF_WIDTH,
   CHARACTER_HIT_HEIGHT,
   CHARACTER_SITTING_OFFSET_PX,
@@ -12,6 +13,7 @@ import {
   MAX_PET_ID_LENGTH,
   PET_HIT_HALF_WIDTH,
   PET_HIT_HEIGHT,
+  SLEEPING_SEAT_TIMER_SEC,
   WAITING_BUBBLE_DURATION_SEC,
 } from '../../constants.js';
 import { contextUsedShare } from '../contextGauge.js';
@@ -126,6 +128,9 @@ export class OfficeState {
    * `findFreeSeat()` to bias new agents toward seats inside their Directory's Area.
    */
   areaMappings: Record<string, string[]> = {};
+  /** Area labels the server uses as project groups (every `zone` it has sent).
+   *  An agent with no group keeps out of these Areas while other seats are free. */
+  readonly zoneLabels = new Set<string>();
 
   /**
    * The first-run consent greeter, deliberately NOT in `characters`.
@@ -229,7 +234,7 @@ export class OfficeState {
     // Second pass: assign remaining characters to free seats
     for (const ch of this.characters.values()) {
       if (ch.seatId || !takesSeat(ch)) continue;
-      const seatId = this.findFreeSeat(ch.directoryName);
+      const seatId = this.findFreeSeat(ch.directoryName, ch.zone);
       if (seatId) {
         this.seats.get(seatId)!.assigned = true;
         ch.seatId = seatId;
@@ -365,14 +370,20 @@ export class OfficeState {
    * preserves pre-Areas single-stage behavior (skips Stage 1; Stage 2 picks
    * unzoned seats from a layout without `areaTiles`, which is every seat).
    */
-  private findFreeSeat(directoryName?: string): string | null {
+  private findFreeSeat(directoryName?: string, zone?: string): string | null {
     const freeSeats: string[] = [];
     for (const [uid, seat] of this.seats) {
       if (!seat.assigned) freeSeats.push(uid);
     }
     if (freeSeats.length === 0) return null;
 
-    const areaLabels = directoryName ? this.areaMappings[directoryName] : undefined;
+    // The server's project group for this agent names its Area outright and
+    // wins over the Directory's own mapping.
+    const areaLabels = zone
+      ? [zone]
+      : directoryName
+        ? this.areaMappings[directoryName]
+        : undefined;
 
     // Stage 1 — in-area seats for the Directory's mapped Area labels.
     if (areaLabels && areaLabels.length > 0) {
@@ -458,8 +469,14 @@ export class OfficeState {
     skipSpawnEffect?: boolean,
     directoryName?: string,
     nearAgentId?: number,
+    zone?: string,
   ): void {
     if (this.characters.has(id)) return;
+    // A remembered seat in another group's Area is not kept: agents regroup
+    // into their own Area when the office loads.
+    if (preferredSeatId && this.seatInWrongZone(preferredSeatId, zone)) {
+      preferredSeatId = undefined;
+    }
 
     let palette: number;
     let repeat: number;
@@ -490,7 +507,7 @@ export class OfficeState {
       seatId = closestFreeSeat(this.seats, anchorAt.col, anchorAt.row);
     }
     if (!seatId) {
-      seatId = this.findFreeSeat(directoryName);
+      seatId = this.findFreeSeat(directoryName, zone);
     }
 
     let ch: Character;
@@ -516,6 +533,10 @@ export class OfficeState {
 
     if (directoryName) {
       ch.directoryName = directoryName;
+    }
+    if (zone) {
+      ch.zone = zone;
+      this.zoneLabels.add(zone);
     }
     if (!skipSpawnEffect) {
       startMatrixEffect(ch, 'spawn');
@@ -657,6 +678,83 @@ export class OfficeState {
         ch.palette = palette;
         ch.repeat = repeat;
       }
+    }
+  }
+
+  /** Whether a seat sits in a bedroom Area (see BEDROOM_AREA_LABELS). */
+  private isBedSeat(seatId: string | null | undefined): boolean {
+    if (!seatId) return false;
+    const label = this.seatZone(seatId);
+    return label !== null && BEDROOM_AREA_LABELS.includes(label.trim().toLowerCase());
+  }
+
+  /**
+   * Whether an agent of project group `zone` should give up a remembered seat:
+   * the seat lies in another group's Area while its own Area has room, or the
+   * agent has no group and the seat lies in some group's Area. Bedroom seats
+   * and seats outside every Area are never "wrong".
+   */
+  private seatInWrongZone(seatId: string, zone: string | undefined): boolean {
+    const label = this.seatZone(seatId);
+    if (label === null || this.isBedSeat(seatId)) return false;
+    if (!zone) return this.zoneLabels.has(label);
+    if (label === zone) return false;
+    for (const [uid, seat] of this.seats) {
+      if (!seat.assigned && this.seatZone(uid) === zone) return true;
+    }
+    return false;
+  }
+
+  /** The conversation title drawn on an agent's label (undefined clears it). */
+  setAgentTitle(agentId: number, title: string | undefined): void {
+    const ch = this.characters.get(agentId);
+    if (ch) ch.title = title;
+  }
+
+  /**
+   * The server says this agent has been idle past its sleep threshold. Its
+   * label reads "Zzz" at once; when the layout has a bedroom Area with a free
+   * seat it also walks there and rests until woken. Safe to call repeatedly:
+   * the decision is made from the seat the agent actually holds, so a sleeper
+   * whose bed disappeared (a layout edit) is sent to bed again.
+   */
+  sleepAgent(agentId: number): void {
+    const ch = this.characters.get(agentId);
+    if (!ch || ch.isSubagent) return;
+    ch.sleeping = true;
+    if (this.isBedSeat(ch.seatId)) {
+      ch.inBed = true;
+      ch.seatTimer = SLEEPING_SEAT_TIMER_SEC;
+      return;
+    }
+    ch.inBed = false;
+    let bed: string | null = null;
+    for (const [uid, seat] of this.seats) {
+      if (!seat.assigned && this.isBedSeat(uid)) {
+        bed = uid;
+        break;
+      }
+    }
+    if (!bed) return;
+    ch.homeSeatId = ch.seatId;
+    ch.inBed = true;
+    this.reassignSeat(agentId, bed);
+    ch.seatTimer = SLEEPING_SEAT_TIMER_SEC;
+  }
+
+  /** An agent is working again: clear "Zzz" and walk it back to the seat it left for bed. */
+  wakeAgent(agentId: number): void {
+    const ch = this.characters.get(agentId);
+    if (!ch || !ch.sleeping) return;
+    ch.sleeping = false;
+    if (!ch.inBed) return;
+    ch.inBed = false;
+    ch.seatTimer = 0;
+    const home = ch.homeSeatId;
+    ch.homeSeatId = undefined;
+    if (home && home !== ch.seatId) {
+      const seat = this.seats.get(home);
+      if (seat && !seat.assigned) this.reassignSeat(agentId, home);
     }
   }
 

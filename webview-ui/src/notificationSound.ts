@@ -1,10 +1,13 @@
 import {
+  NOTIFICATION_MIN_GAIN,
   NOTIFICATION_NOTE_1_HZ,
   NOTIFICATION_NOTE_1_START_SEC,
   NOTIFICATION_NOTE_2_HZ,
   NOTIFICATION_NOTE_2_START_SEC,
   NOTIFICATION_NOTE_DURATION_SEC,
   NOTIFICATION_VOLUME,
+  NOTIFICATION_VOLUME_DEFAULT_PCT,
+  NOTIFICATION_VOLUME_STORAGE_KEY,
   PERMISSION_NOTE_1_HZ,
   PERMISSION_NOTE_1_START_SEC,
   PERMISSION_NOTE_2_HZ,
@@ -39,6 +42,30 @@ export function isSoundEnabled(): boolean {
   return soundEnabled;
 }
 
+/** How loud the sounds play, as a percent (0-100) of their designed volume.
+ *  Kept per browser; anything unreadable falls back to the default. */
+export function getNotificationVolumePct(): number {
+  try {
+    const raw = window.localStorage.getItem(NOTIFICATION_VOLUME_STORAGE_KEY);
+    const value = raw === null || raw === '' ? NaN : Number(raw);
+    if (Number.isFinite(value)) return Math.min(100, Math.max(0, value));
+  } catch {
+    // storage unavailable: use the default
+  }
+  return NOTIFICATION_VOLUME_DEFAULT_PCT;
+}
+
+export function setNotificationVolumePct(pct: number): void {
+  try {
+    window.localStorage.setItem(
+      NOTIFICATION_VOLUME_STORAGE_KEY,
+      String(Math.min(100, Math.max(0, pct))),
+    );
+  } catch {
+    // storage unavailable: the choice lasts for this page only
+  }
+}
+
 function playNote(
   ctx: AudioContext,
   freq: number,
@@ -53,7 +80,8 @@ function playNote(
   osc.type = 'sine';
   osc.frequency.setValueAtTime(freq, t);
 
-  gain.gain.setValueAtTime(volume, t);
+  const scaled = (volume * getNotificationVolumePct()) / 100;
+  gain.gain.setValueAtTime(Math.max(NOTIFICATION_MIN_GAIN, scaled), t);
   gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
   osc.connect(gain);

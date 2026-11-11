@@ -236,6 +236,19 @@ export interface Character extends Blinker {
   matrixEffectSeeds: number[];
   /** Directory name — the agent's origin label (only set for multi-root workspaces) */
   directoryName?: string;
+  /** The conversation's title as the CLI shows it; drawn on the label in
+   *  place of the Directory name when the server knows one. */
+  title?: string;
+  /** Project group (a layout Area label) the server sorted this agent into;
+   *  it is seated in that Area while a seat there is free. */
+  zone?: string;
+  /** Idle past the server's sleep threshold: the label reads "Zzz" and, when
+   *  the layout has a bedroom Area, the agent rests on a seat there. */
+  sleeping?: boolean;
+  /** Set once a sleeping agent holds a bedroom seat: its rest there never ends. */
+  inBed?: boolean;
+  /** The seat a sleeping agent left for bed, to return to when it wakes. */
+  homeSeatId?: string | null;
   /** Headless agent: adopted from outside the office, so there is no terminal to
    *  focus. Rendered translucent. Teammates and sub-agents are never headless —
    *  clicking them reaches their lead's / parent's terminal. */

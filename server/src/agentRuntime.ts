@@ -39,6 +39,7 @@ import {
 } from './fileWatcher.js';
 import type { HookEvent } from './hookEventHandler.js';
 import { HookEventHandler } from './hookEventHandler.js';
+import { attachTitlesToStatus } from './officeExtras.js';
 import { assignPaletteIfNeeded } from './paletteAssigner.js';
 import { PathSet, pathsMatch } from './pathKey.js';
 import { SessionRouter } from './sessionRouter.js';
@@ -97,6 +98,8 @@ export class AgentRuntime {
     // Wire module-level dependencies
     setDismissalTracker(this.dismissalTracker);
     setHookProvider(provider);
+    // Labels show the conversation title: every agentStatus carries it.
+    attachTitlesToStatus(store);
     setFileWatcherHookProvider(provider);
     this.subagentWatch = new SubagentWatch(store);
     setSubagentWatch(this.subagentWatch);

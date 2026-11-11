@@ -4,6 +4,7 @@ import {
   HELPER_STAND_UP_DELAY_SEC,
   SEAT_REST_MAX_SEC,
   SEAT_REST_MIN_SEC,
+  SLEEPING_SEAT_TIMER_SEC,
   TYPE_FRAME_DURATION_SEC,
   WALK_FRAME_DURATION_SEC,
   WALK_SPEED_PX_PER_SEC,
@@ -443,7 +444,10 @@ export function getCharacterSprite(ch: Character, sprites: CharacterSprites): Sp
 
 /** Sit out a usual rest in the chair before standing up to wander. */
 export function restInChair(ch: Character): void {
-  ch.seatTimer = randomRange(SEAT_REST_MIN_SEC, SEAT_REST_MAX_SEC);
+  // An agent in bed stays there until the server reports it working again.
+  ch.seatTimer = ch.inBed
+    ? SLEEPING_SEAT_TIMER_SEC
+    : randomRange(SEAT_REST_MIN_SEC, SEAT_REST_MAX_SEC);
 }
 
 function randomRange(min: number, max: number): number {

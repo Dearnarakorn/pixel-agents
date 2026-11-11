@@ -7,6 +7,7 @@ import type { AgentRuntime } from './agentRuntime.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import type { LoadedAssets, LoadedCharacterSprites, LoadedPetSprites } from './assetLoader.js';
 import { cardOrderMessage, saveCardOrder } from './cardOrder.js';
+import { agentTitles, agentZones } from './officeExtras.js';
 import {
   characterProfilesLoadedMessage,
   handleCharacterProfilesClientMessage,
@@ -749,6 +750,8 @@ function handleWebviewReady(send: WsSend, ctx: ClientMessageContext): void {
     agentMeta,
     directoryNames,
     externalAgents,
+    titles: agentTitles(store),
+    zones: agentZones(store),
   });
 
   // 7. Layout last (see step 3): flushes the webview's buffered existingAgents

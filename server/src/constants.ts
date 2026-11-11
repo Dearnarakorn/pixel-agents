@@ -25,6 +25,24 @@ export const EXTERNAL_ACTIVE_THRESHOLD_MS = 120_000; // 2 minutes
 /** Remove external agents after this much inactivity */
 // export const EXTERNAL_STALE_TIMEOUT_MS = 300_000; // 5 minutes - deprecated
 export const EXTERNAL_STALE_CHECK_INTERVAL_MS = 30_000;
+
+// ── Office extras (titles, sleep, pruning, project groups) ──
+/** Longest conversation title sent to the office label; longer ones are cut. */
+export const AGENT_TITLE_MAX_LENGTH = 40;
+/** An external agent whose transcript has not changed for this long is asleep
+ *  (the office shows "Zzz" and sends it to bed). Env PIXEL_AGENTS_SLEEP_MIN. */
+export const AGENT_SLEEP_AFTER_MIN = 30;
+/** An external agent idle this long is removed from the office; it returns by
+ *  itself when its transcript is written again. Env PIXEL_AGENTS_REMOVE_HOURS. */
+export const AGENT_REMOVE_AFTER_HOURS = 24;
+/** An agent idle this long is removed when a more recently active agent has
+ *  the same conversation title (a chat that continued under a new session id
+ *  leaves its old transcript behind). */
+export const DUPLICATE_TITLE_IDLE_MS = 300_000;
+/** File under ~/.pixel-agents holding the project-group rules. */
+export const ZONES_FILE_NAME = 'zones.json';
+/** How long a read of that file is reused before it is read again. */
+export const ZONES_CACHE_MS = 10_000;
 /** Cooldown after user closes an agent via X. Must be > EXTERNAL_ACTIVE_THRESHOLD_MS
  *  so the file's mtime becomes stale before the dismissal expires. */
 export const DISMISSED_COOLDOWN_MS = 180_000; // 3 minutes

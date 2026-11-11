@@ -33,6 +33,9 @@ import { CharacterState } from '../types.js';
 // going idle waiting on the user (Notification(idle_prompt)) additionally
 // surfaces this label. Driven by Character.waitingAwaitingInput.
 const WAITING_INPUT_ACTIVITY_TEXT = 'Waiting for input';
+const IDLE_ACTIVITY_TEXT = 'Idle';
+/** Shown in place of "Idle" once the server says the agent has slept (Character.sleeping). */
+const SLEEPING_ACTIVITY_TEXT = 'Zzz';
 
 interface ToolOverlayProps {
   officeState: OfficeState;
@@ -76,7 +79,7 @@ function getActivityText(
     }
   }
 
-  return 'Idle';
+  return IDLE_ACTIVITY_TEXT;
 }
 
 /** A speech-bubble sprite blitted into a DOM canvas. Bubbles live in the DOM
@@ -262,6 +265,9 @@ export function ToolOverlay({
             ch.bubbleType,
             ch.waitingAwaitingInput ?? false,
           );
+          if (ch.sleeping && activityText === IDLE_ACTIVITY_TEXT) {
+            activityText = SLEEPING_ACTIVITY_TEXT;
+          }
         }
 
         // Determine dot color
@@ -336,9 +342,9 @@ export function ToolOverlay({
                   >
                     {activityText}
                   </span>
-                  {ch.directoryName && (
+                  {(ch.title || ch.directoryName) && (
                     <span className="text-2xs leading-none overflow-hidden text-ellipsis block">
-                      {ch.directoryName}
+                      {ch.title || ch.directoryName}
                     </span>
                   )}
                 </div>

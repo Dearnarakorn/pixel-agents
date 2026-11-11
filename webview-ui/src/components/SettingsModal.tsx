@@ -1,8 +1,16 @@
+import type { CSSProperties } from 'react';
 import { useRef, useState } from 'react';
 
 import { officeRadio } from '../music/musicEngine.js';
 import { useOfficeRadio } from '../music/useOfficeRadio.js';
-import { isSoundEnabled, setSoundEnabled } from '../notificationSound.js';
+import { NOTIFICATION_VOLUME_STEP_PCT } from '../constants.js';
+import {
+  getNotificationVolumePct,
+  isSoundEnabled,
+  playDoneSound,
+  setNotificationVolumePct,
+  setSoundEnabled,
+} from '../notificationSound.js';
 import { isBrowserRuntime } from '../runtime.js';
 import { transport } from '../transport/index.js';
 import { useUsageBridge } from '../usage/useUsageBridge.js';
@@ -11,6 +19,7 @@ import { Checkbox } from './ui/Checkbox.js';
 import { MenuItem } from './ui/MenuItem.js';
 import { Modal } from './ui/Modal.js';
 import { PixelIcon } from './ui/PixelIcon.js';
+import { PixelText } from './ui/PixelText.js';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -75,6 +84,7 @@ export function SettingsModal({
   // The office radio's player is a per-browser setting the radio keeps itself.
   const radio = useOfficeRadio();
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled);
+  const [volumePct, setVolumePct] = useState(getNotificationVolumePct);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [assetDirDraft, setAssetDirDraft] = useState('');
   // Usage Bars: installing rewrites the user's status line, so it asks first
@@ -203,6 +213,30 @@ export function SettingsModal({
             transport.send({ type: 'setSoundEnabled', enabled: newVal });
           }}
         />
+        <label
+          className="flex items-center gap-8 w-full py-6 px-10"
+          title="How loud the done and needs-approval sounds play (this browser only)"
+        >
+          <span className="shrink-0">Notification Volume</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={NOTIFICATION_VOLUME_STEP_PCT}
+            value={volumePct}
+            aria-label="Notification volume"
+            className="pixel-range flex-1 min-w-0"
+            style={{ '--range-fill': `${volumePct}%` } as CSSProperties}
+            onChange={(e) => {
+              const pct = Number(e.target.value);
+              setVolumePct(pct);
+              setNotificationVolumePct(pct);
+            }}
+            // A sample at the new level once the drag ends (no-op while sounds are off).
+            onPointerUp={() => void playDoneSound()}
+          />
+          <PixelText text={`${volumePct}%`} className="w-44 justify-end shrink-0" />
+        </label>
         <Checkbox
           label="Music Player"
           title="The office radio's player, bottom of the office"

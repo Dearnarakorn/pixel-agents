@@ -457,7 +457,9 @@ export function useExtensionMessages(
           const repeat = msg.repeat as number | undefined;
           // A resumed conversation asks for the seat its agent sat in.
           const seatId = msg.seatId as string | undefined;
-          os.addAgent(id, palette, repeat, seatId, undefined, directoryName);
+          const zone = typeof msg.zone === 'string' ? msg.zone : undefined;
+          os.addAgent(id, palette, repeat, seatId, undefined, directoryName, undefined, zone);
+          if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
           noteDirectoryName(directoryName);
           if (isHeadlessAgent(msg.isExternal as boolean | undefined)) {
             os.setHeadless(id, true);
@@ -475,6 +477,11 @@ export function useExtensionMessages(
         const meta = (msg.agentMeta || {}) as Record<number, ExistingAgentMeta>;
         const directoryNames = (msg.directoryNames || {}) as Record<number, string>;
         const externalAgents = (msg.externalAgents || {}) as Record<number, boolean>;
+        const titles = (msg.titles || {}) as Record<number, string>;
+        const zones = (msg.zones || {}) as Record<number, string>;
+        // Every group label first: an agent with no group must already know
+        // which Areas belong to groups when it is seated.
+        for (const zone of Object.values(zones)) os.zoneLabels.add(zone);
         const headlessAgents: Record<number, boolean> = {};
         for (const id of incoming) {
           noteDirectoryName(directoryNames[id]);
@@ -493,6 +500,7 @@ export function useExtensionMessages(
             layoutReadyRef.current,
             pendingAgents,
             headlessAgents,
+            { titles, zones },
           )
         ) {
           saveAgentSeats(os);
@@ -620,9 +628,17 @@ export function useExtensionMessages(
       } else if (msg.type === 'agentSelected') {
         const id = msg.id as number;
         setSelectedAgent(id);
+      } else if (msg.type === 'agentStatus' && msg.sleeping === true) {
+        // Not an activity change: the agent has been idle past the server's
+        // sleep threshold. Label it "Zzz" and send it to bed when there is one.
+        const id = msg.id as number;
+        if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
+        os.sleepAgent(id);
       } else if (msg.type === 'agentStatus') {
         const id = msg.id as number;
         const status = msg.status as string;
+        if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
+        if (status === 'active') os.wakeAgent(id);
         markSeenActivity(id);
         setAgentStatuses((prev) => {
           if (status === 'active') return omitKey(prev, id);

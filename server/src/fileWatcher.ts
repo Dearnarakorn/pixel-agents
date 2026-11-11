@@ -45,6 +45,7 @@ import {
 } from './constants.js';
 import { clearContextUsage, seedContextUsage } from './contextUsage.js';
 import type { DismissalTracker } from './dismissalTracker.js';
+import { sleepAndPrune } from './officeExtras.js';
 import { assignPaletteIfNeeded } from './paletteAssigner.js';
 import { pathsMatch } from './pathKey.js';
 import type { SubagentWatch } from './subagentWatch.js';
@@ -1510,24 +1511,31 @@ export function startStaleExternalAgentCheck(
   hooksEnabledRef?: { current: boolean },
 ): ReturnType<typeof setInterval> {
   return setInterval(() => {
-    // When hooks are active, SessionEnd handles agent cleanup.
-    if (hooksEnabledRef?.current) return;
     const toRemove: number[] = [];
 
-    for (const [id, agent] of agents) {
-      if (!agent.isExternal) continue;
+    // When hooks are active, SessionEnd handles cleanup of deleted transcripts.
+    if (!hooksEnabledRef?.current) {
+      for (const [id, agent] of agents) {
+        if (!agent.isExternal) continue;
 
-      // Only despawn if the JSONL file has been deleted from disk.
-      // Inactive external agents stay alive so they can resume when
-      // the session continues (e.g., claude --resume).
-      try {
-        fs.statSync(agent.jsonlFile);
-        // File still exists — keep the agent alive regardless of mtime
-      } catch {
-        // File deleted — remove agent
-        toRemove.push(id);
+        // Only despawn if the JSONL file has been deleted from disk.
+        // Inactive external agents stay alive so they can resume when
+        // the session continues (e.g., claude --resume).
+        try {
+          fs.statSync(agent.jsonlFile);
+          // File still exists — keep the agent alive regardless of mtime
+        } catch {
+          // File deleted — remove agent
+          toRemove.push(id);
+        }
       }
     }
+
+    // Idle agents: report the sleepers, drop the long-idle and the superseded.
+    // Runs with hooks on too — a session that is merely left open sends no
+    // SessionEnd, and the hooks preference defaults to on even when no hook
+    // is installed.
+    toRemove.push(...sleepAndPrune(agents, new Set(toRemove)));
 
     for (const id of toRemove) {
       const agent = agents.get(id);

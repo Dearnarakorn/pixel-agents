@@ -225,6 +225,14 @@ components:
             The seat the agent should take when it is free (a resumed
             conversation's agent returns to where it sat). Absent, the office
             picks one.
+        title:
+          type: string
+          description: The conversation's title, drawn on the agent's label in place of the Directory name.
+        zone:
+          type: string
+          description: >-
+            The agent's project group: a layout Area label the office seats it
+            in while a seat there is free (rules in ~/.pixel-agents/zones.json).
 
     AgentClosed:
       description: An agent has been removed from the office.
@@ -277,6 +285,16 @@ components:
           description: Map of agent ID (string) to external flag.
           additionalProperties:
             type: boolean
+        titles:
+          type: object
+          description: Map of agent ID (string) to conversation title (agents that have one).
+          additionalProperties:
+            type: string
+        zones:
+          type: object
+          description: Map of agent ID (string) to project group (agents that have one).
+          additionalProperties:
+            type: string
 
     AgentStatus:
       description: Active vs waiting state for an agent (drives character animation).
@@ -296,6 +314,15 @@ components:
             Only meaningful when status is "waiting". True when the agent went
             idle waiting on the user (drives the "Waiting for input" label);
             absent/false means the agent finished its turn ("Done").
+        title:
+          type: string
+          description: The conversation's current title, so the label follows a rename.
+        sleeping:
+          type: boolean
+          description: >-
+            True on the periodic notice that the agent has been idle past the
+            sleep threshold. Not an activity change: the office labels it
+            "Zzz" and rests it in a bedroom Area; the next "active" wakes it.
 
     AgentActivityStatus:
       description: Activity state of an agent.

@@ -215,6 +215,16 @@ export const PERMISSION_NOTE_1_START_SEC = 0;
 export const PERMISSION_NOTE_2_START_SEC = 0.12;
 export const PERMISSION_NOTE_DURATION_SEC = 0.15;
 export const PERMISSION_VOLUME = 0.12;
+/** Share (0-100) of the two volumes above the sounds play at, until the user
+ *  moves the Settings slider. */
+export const NOTIFICATION_VOLUME_DEFAULT_PCT = 30;
+/** Slider step, in percent. */
+export const NOTIFICATION_VOLUME_STEP_PCT = 5;
+/** localStorage key for that share (per browser, like the radio's volume). */
+export const NOTIFICATION_VOLUME_STORAGE_KEY = 'pixel-agents.notificationVolume';
+/** Quietest gain a note may start at: the fade is an exponential ramp, which
+ *  cannot start at 0 nor end above where it started. */
+export const NOTIFICATION_MIN_GAIN = 0.0011;
 
 // ── Furniture Animation ─────────────────────────────────────
 export const FURNITURE_ANIM_INTERVAL_SEC = 0.2;
@@ -229,6 +239,12 @@ export const WAITING_BUBBLE_DURATION_SEC = 2.0;
 export const DISMISS_BUBBLE_FAST_FADE_SEC = 0.3;
 export const INACTIVE_SEAT_TIMER_MIN_SEC = 3.0;
 export const INACTIVE_SEAT_TIMER_RANGE_SEC = 2.0;
+/** Layout Area labels (lower-cased) that make an Area a bedroom: sleeping
+ *  agents rest on its seats. */
+export const BEDROOM_AREA_LABELS: readonly string[] = ['bedroom', 'ห้องนอน'];
+/** Rest timer of an agent in bed: long enough never to run out, so it stays
+ *  put until the server reports it working again. */
+export const SLEEPING_SEAT_TIMER_SEC = 1e9;
 export const AUTO_ON_FACING_DEPTH = 3;
 export const AUTO_ON_SIDE_DEPTH = 2;
 export const CHARACTER_HIT_HALF_WIDTH = 8;

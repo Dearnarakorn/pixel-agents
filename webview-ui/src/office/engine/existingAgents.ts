@@ -26,6 +26,16 @@ export interface PendingAgent {
   seatId?: string;
   directoryName?: string;
   isHeadless?: boolean;
+  /** The conversation title shown on the label. */
+  title?: string;
+  /** The project group (layout Area label) the agent is seated in. */
+  zone?: string;
+}
+
+/** Per-agent extras of the existingAgents message, keyed by agent id. */
+export interface ExistingAgentExtras {
+  titles?: Record<number, string>;
+  zones?: Record<number, string>;
 }
 
 /** Minimal structural view of OfficeState this reconciler needs. */
@@ -38,7 +48,11 @@ export interface ExistingAgentsOffice {
     preferredSeatId?: string,
     skipSpawnEffect?: boolean,
     directoryName?: string,
+    nearAgentId?: number,
+    zone?: string,
   ) => void;
+  /** Optional so older test doubles of this interface stay valid. */
+  setAgentTitle?: (id: number, title: string | undefined) => void;
   setHeadless: (id: number, headless: boolean) => void;
   /** Start an agent at rest: not working, resting in its chair if it has one. */
   restAgent: (id: number) => void;
@@ -52,7 +66,8 @@ export interface ExistingAgentsOffice {
  * an agent starts out idle, resting in its chair, instead of typing at a turn long over.
  */
 export function restoreAgent(os: ExistingAgentsOffice, p: PendingAgent): void {
-  os.addAgent(p.id, p.palette, p.repeat, p.seatId, true, p.directoryName);
+  os.addAgent(p.id, p.palette, p.repeat, p.seatId, true, p.directoryName, undefined, p.zone);
+  if (p.title) os.setAgentTitle?.(p.id, p.title);
   if (p.isHeadless) os.setHeadless(p.id, true);
   os.restAgent(p.id);
 }
@@ -73,6 +88,7 @@ export function reconcileExistingAgents(
   layoutReady: boolean,
   pending: PendingAgent[],
   headlessAgents: Record<number, boolean> = {},
+  extras: ExistingAgentExtras = {},
 ): boolean {
   let addedDirectly = false;
   for (const id of incoming) {
@@ -84,6 +100,8 @@ export function reconcileExistingAgents(
       seatId: m?.seatId,
       directoryName: directoryNames[id],
       isHeadless: headlessAgents[id] === true,
+      title: extras.titles?.[id],
+      zone: extras.zones?.[id],
     };
     if (layoutReady) {
       if (!os.characters.has(p.id)) {
@@ -94,6 +112,7 @@ export function reconcileExistingAgents(
         // office's own look and seat and saving them back reshuffled the
         // office for every other viewer.
         os.syncAgent(p.id, p.palette, p.repeat, p.seatId);
+        if (p.title) os.setAgentTitle?.(p.id, p.title);
       }
     } else {
       pending.push(p);
