@@ -8,6 +8,7 @@ import {
   BASH_COMMAND_DISPLAY_MAX_LENGTH,
   TASK_DESCRIPTION_DISPLAY_MAX_LENGTH,
 } from '../../../constants.js';
+import { backgroundTasksRunning } from './backgroundTasks.js';
 import {
   areHooksInstalled as installerAreHooksInstalled,
   installHooks as installerInstallHooks,
@@ -23,7 +24,6 @@ import {
   CLAUDE_SUBAGENT_TOOLS,
   CLAUDE_TERMINAL_NAME_PREFIX,
 } from './constants.js';
-import { backgroundTasksRunning } from './backgroundTasks.js';
 import { conversationTitle } from './conversationTitle.js';
 import { lastActivityAt } from './lastActivity.js';
 import { isInheritedClaudeSessionEnv } from './sessionEnv.js';
