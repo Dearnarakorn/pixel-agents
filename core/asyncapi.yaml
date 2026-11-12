@@ -343,6 +343,11 @@ components:
         title:
           type: string
           description: The conversation's current title, so the label follows a rename.
+        zone:
+          type: string
+          description: >-
+            The agent's current project group ('' = none). A zones.json rule
+            can match the title, so a rename can move an agent to another Area.
         sleeping:
           type: boolean
           description: >-

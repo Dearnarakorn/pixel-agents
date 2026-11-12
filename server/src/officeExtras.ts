@@ -70,6 +70,9 @@ export function attachTitlesToStatus(store: AgentStateStore): void {
       const agent = store.get(message.id);
       const title = agent ? agentTitle(agent) : undefined;
       if (title) message.title = title;
+      // The zone too: a title rule can move an agent when its chat is renamed.
+      // An empty string means "no zone" (absent would mean "unchanged").
+      if (agent) message.zone = agentZone(agent) ?? '';
       // A finished turn says when it finished and whether it failed, so the
       // office can label it "Done · 5m" or "Error" instead of a bare "Idle".
       if (agent && message.status === 'waiting' && message.sleeping !== true) {
@@ -170,7 +173,12 @@ export function agentLinks(store: AgentStateStore): Record<number, string> {
 
 // ── Project groups (zones) ───────────────────────────────────
 
-type ZoneRule = [pattern: RegExp, zone: string];
+/** What a rule's regex is tested against. */
+type ZoneTarget = 'folder' | 'title';
+type ZoneRule = [pattern: RegExp, zone: string, target: ZoneTarget];
+
+/** A rule regex starting with this tests the conversation title instead of the folder. */
+const TITLE_RULE_PREFIX = 'title:';
 
 let zoneRules: ZoneRule[] = [];
 let zoneRulesReadAt = 0;
@@ -178,10 +186,12 @@ let zoneRulesReadAt = 0;
 /**
  * The rules in ~/.pixel-agents/zones.json: `{ "rules": [[regex, zone], ...] }`.
  * Each regex is tested, case-insensitively, against the name of the agent's
- * transcript folder (the session's working directory as the CLI encodes it);
- * the first match names the zone, which must be an Area label in the layout.
- * No file, a broken file or no match = no zone. Re-read at most every
- * ZONES_CACHE_MS, so edits apply without a restart.
+ * transcript folder (the session's working directory as the CLI encodes it),
+ * or, when it starts with "title:", against the conversation's title (so one
+ * chat can be placed by renaming it, whatever folder it runs in). The first
+ * match names the zone, which must be an Area label in the layout. No file, a
+ * broken file or no match = no zone. Re-read at most every ZONES_CACHE_MS, so
+ * edits apply without a restart.
  */
 function readZoneRules(): ZoneRule[] {
   const now = Date.now();
@@ -199,7 +209,9 @@ function readZoneRules(): ZoneRule[] {
           continue;
         }
         try {
-          rules.push([new RegExp(rule[0], 'i'), rule[1]]);
+          const byTitle = rule[0].startsWith(TITLE_RULE_PREFIX);
+          const source = byTitle ? rule[0].slice(TITLE_RULE_PREFIX.length) : rule[0];
+          rules.push([new RegExp(source, 'i'), rule[1], byTitle ? 'title' : 'folder']);
         } catch {
           // an invalid regex skips its rule, not the file
         }
@@ -214,10 +226,15 @@ function readZoneRules(): ZoneRule[] {
 
 /** The project group of an agent, or undefined when no rule matches. */
 export function agentZone(agent: AgentState): string | undefined {
-  if (!agent.projectDir) return undefined;
-  const folder = path.basename(agent.projectDir);
-  for (const [pattern, zone] of readZoneRules()) {
-    if (pattern.test(folder)) return zone;
+  const folder = agent.projectDir ? path.basename(agent.projectDir) : undefined;
+  let title: string | undefined | null = null; // null = not read yet (read lazily, once)
+  for (const [pattern, zone, target] of readZoneRules()) {
+    if (target === 'title') {
+      if (title === null) title = agentTitle(agent);
+      if (title && pattern.test(title)) return zone;
+    } else if (folder && pattern.test(folder)) {
+      return zone;
+    }
   }
   return undefined;
 }

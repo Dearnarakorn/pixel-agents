@@ -649,6 +649,7 @@ export function useExtensionMessages(
         const id = msg.id as number;
         const status = msg.status as string;
         if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
+        if (typeof msg.zone === 'string') os.setAgentZone(id, msg.zone);
         if (status === 'active') {
           os.wakeAgent(id);
           os.regroupAgent(id);

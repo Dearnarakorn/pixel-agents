@@ -760,6 +760,16 @@ export class OfficeState {
     if (seat) this.reassignSeat(agentId, seat);
   }
 
+  /** The agent's project group changed (a title rule and a renamed chat):
+   *  remember it; regroupAgent moves the agent once it starts working.
+   *  An empty string clears the group. */
+  setAgentZone(agentId: number, zone: string): void {
+    const ch = this.characters.get(agentId);
+    if (!ch) return;
+    ch.zone = zone || undefined;
+    if (zone) this.zoneLabels.add(zone);
+  }
+
   /** The link that opens an agent's session in its CLI's own app. */
   setAgentLink(agentId: number, link: string | undefined): void {
     const ch = this.characters.get(agentId);
