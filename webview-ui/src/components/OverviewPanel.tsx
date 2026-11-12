@@ -44,9 +44,10 @@ const MS_PER_MINUTE = 60_000;
 const MINUTES_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
 
-/** "5m", "3h", "2d": how long ago, for done and asleep rows. */
+/** "now", "5m", "3h", "2d": how long ago, for done and asleep rows. */
 function ago(ms: number): string {
   const minutes = Math.floor(Math.max(0, ms) / MS_PER_MINUTE);
+  if (minutes < 1) return 'now';
   if (minutes < MINUTES_PER_HOUR) return `${minutes}m`;
   const hours = Math.floor(minutes / MINUTES_PER_HOUR);
   if (hours < HOURS_PER_DAY) return `${hours}h`;

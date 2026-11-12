@@ -490,8 +490,14 @@ export class OfficeState {
   ): void {
     if (this.characters.has(id)) return;
     // A remembered seat in another group's Area is not kept: agents regroup
-    // into their own Area when the office loads.
-    if (preferredSeatId && this.seatInWrongZone(preferredSeatId, zone)) {
+    // into their own Area when the office loads. Nor is a bed: whether the
+    // agent is asleep is only known once the server says so (within a stale
+    // check), and sleepAgent then walks it to bed. Keeping the bed would leave
+    // an agent that has woken up since lying in it, never told to get up.
+    if (
+      preferredSeatId &&
+      (this.isBedSeat(preferredSeatId) || this.seatInWrongZone(preferredSeatId, zone))
+    ) {
       preferredSeatId = undefined;
     }
 
@@ -688,6 +694,7 @@ export class OfficeState {
       seatId !== undefined &&
       seatId !== ch.seatId &&
       !ch.inBed &&
+      !this.isBedSeat(seatId) &&
       !this.seatInWrongZone(seatId, ch.zone)
     ) {
       const seat = this.seats.get(seatId);
