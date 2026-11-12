@@ -490,6 +490,12 @@ async function main(): Promise<void> {
     if (dirs && dirs[0]) {
       const projectDir = dirs[0];
       console.log(`[Pixel Agents] Scanning project dir: ${projectDir}`);
+      // Restore the remembered agents BEFORE the scanners start. The first
+      // office to connect also asks for this, but a scan that adopts a live
+      // session before any office is open saves the agent list — and would
+      // save it with the remembered agents missing, losing them for good.
+      // Restoring twice is harmless: agents already in the store are skipped.
+      runtime.restoreExternalAgents();
       runtime.startProjectScan(projectDir);
       runtime.startExternalScanning(projectDir);
       runtime.startStaleCheck();
