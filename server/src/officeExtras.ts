@@ -182,6 +182,9 @@ const TITLE_RULE_PREFIX = 'title:';
 
 let zoneRules: ZoneRule[] = [];
 let zoneRulesReadAt = 0;
+/** Zones whose agents sleep at their desks instead of walking to a bed
+ *  (zones.json `deskSleepZones`), read with the rules. */
+let deskSleepZones = new Set<string>();
 
 /**
  * The rules in ~/.pixel-agents/zones.json: `{ "rules": [[regex, zone], ...] }`.
@@ -198,11 +201,20 @@ function readZoneRules(): ZoneRule[] {
   if (zoneRulesReadAt !== 0 && now - zoneRulesReadAt < ZONES_CACHE_MS) return zoneRules;
   zoneRulesReadAt = now;
   const rules: ZoneRule[] = [];
+  const atDesk = new Set<string>();
   try {
     const file = path.join(os.homedir(), PIXEL_AGENTS_DIR, ZONES_FILE_NAME);
     const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf8'));
-    const list =
-      parsed && typeof parsed === 'object' ? (parsed as { rules?: unknown }).rules : undefined;
+    const record =
+      parsed && typeof parsed === 'object'
+        ? (parsed as { rules?: unknown; deskSleepZones?: unknown })
+        : undefined;
+    if (Array.isArray(record?.deskSleepZones)) {
+      for (const zone of record.deskSleepZones) {
+        if (typeof zone === 'string') atDesk.add(zone);
+      }
+    }
+    const list = record?.rules;
     if (Array.isArray(list)) {
       for (const rule of list) {
         if (!Array.isArray(rule) || typeof rule[0] !== 'string' || typeof rule[1] !== 'string') {
@@ -221,7 +233,15 @@ function readZoneRules(): ZoneRule[] {
     // no file, or not JSON: no rules
   }
   zoneRules = rules;
+  deskSleepZones = atDesk;
   return rules;
+}
+
+/** True when the agent's zone is listed in zones.json `deskSleepZones`: it
+ *  shows "Zzz" in its own seat rather than walking to a bed. */
+export function sleepsAtDesk(agent: AgentState): boolean {
+  const zone = agentZone(agent); // reads the file (and deskSleepZones) when stale
+  return zone !== undefined && deskSleepZones.has(zone);
 }
 
 /** The project group of an agent, or undefined when no rule matches. */
@@ -296,7 +316,13 @@ export function sleepAndPrune(store: AgentStateStore, skip: ReadonlySet<number>)
       remove.push(id);
     } else if (idleMs > sleepAfterMs && agentBackgroundTasks(agent) === 0) {
       // Waiting on a background job is not asleep: a long job keeps it at its desk.
-      store.broadcast({ type: 'agentStatus', id, status: 'waiting', sleeping: true });
+      store.broadcast({
+        type: 'agentStatus',
+        id,
+        status: 'waiting',
+        sleeping: true,
+        ...(sleepsAtDesk(agent) ? { atDesk: true } : {}),
+      });
     }
   }
   return remove;

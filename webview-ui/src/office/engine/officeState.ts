@@ -787,12 +787,24 @@ export class OfficeState {
    * label reads "Zzz" at once; when the layout has a bedroom Area with a free
    * seat it also walks there and rests until woken. Safe to call repeatedly:
    * the decision is made from the seat the agent actually holds, so a sleeper
-   * whose bed disappeared (a layout edit) is sent to bed again.
+   * whose bed disappeared (a layout edit) is sent to bed again. `atDesk`
+   * (zones the user keeps at their desks): "Zzz" in its own seat, no bed; one
+   * already in bed walks back to a seat of its zone.
    */
-  sleepAgent(agentId: number): void {
+  sleepAgent(agentId: number, atDesk = false): void {
     const ch = this.characters.get(agentId);
     if (!ch || ch.isSubagent) return;
     ch.sleeping = true;
+    if (atDesk) {
+      if (!ch.seatId || this.isBedSeat(ch.seatId) || this.seatInWrongZone(ch.seatId, ch.zone)) {
+        const seat = this.findFreeSeat(ch.directoryName, ch.zone);
+        if (seat && !this.isBedSeat(seat)) this.reassignSeat(agentId, seat);
+      }
+      ch.inBed = false;
+      ch.homeSeatId = undefined;
+      ch.seatTimer = SLEEPING_SEAT_TIMER_SEC;
+      return;
+    }
     if (this.isBedSeat(ch.seatId)) {
       ch.inBed = true;
       ch.seatTimer = SLEEPING_SEAT_TIMER_SEC;

@@ -644,7 +644,8 @@ export function useExtensionMessages(
         // sleep threshold. Label it "Zzz" and send it to bed when there is one.
         const id = msg.id as number;
         if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
-        os.sleepAgent(id);
+        if (typeof msg.zone === 'string') os.setAgentZone(id, msg.zone);
+        os.sleepAgent(id, msg.atDesk === true);
       } else if (msg.type === 'agentStatus') {
         const id = msg.id as number;
         const status = msg.status as string;

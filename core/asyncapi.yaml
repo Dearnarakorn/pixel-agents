@@ -354,6 +354,11 @@ components:
             True on the periodic notice that the agent has been idle past the
             sleep threshold. Not an activity change: the office labels it
             "Zzz" and rests it in a bedroom Area; the next "active" wakes it.
+        atDesk:
+          type: boolean
+          description: >-
+            With sleeping: the agent's zone is listed in zones.json
+            deskSleepZones, so it rests in its own seat instead of a bed.
         idleSince:
           type: number
           description: >-
