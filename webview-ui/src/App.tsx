@@ -12,6 +12,7 @@ import { EditActionBar } from './components/EditActionBar.js';
 import { IntroBubble } from './components/IntroBubble.js';
 import { LoadingScene } from './components/LoadingScene.js';
 import { MigrationNotice } from './components/MigrationNotice.js';
+import { OverviewPanel } from './components/OverviewPanel.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { TerminalDrawer } from './components/TerminalDrawer.js';
 import { TerminalHideRibbon } from './components/TerminalHideRibbon.js';
@@ -19,7 +20,11 @@ import { Tooltip } from './components/Tooltip.js';
 import { Modal } from './components/ui/Modal.js';
 import { VersionIndicator } from './components/VersionIndicator.js';
 import { MobileZoomLevel, ZoomControls } from './components/ZoomControls.js';
-import { CONVERSATION_SIDEBAR_WIDTH_PX, OFFICE_CANVAS_TEST_ID } from './constants.js';
+import {
+  CONVERSATION_SIDEBAR_WIDTH_PX,
+  OFFICE_CANVAS_TEST_ID,
+  OVERVIEW_OPEN_STORAGE_KEY,
+} from './constants.js';
 import type { ConversationSearchScope } from './conversations/ConversationList.js';
 import { ConversationSearch } from './conversations/ConversationSearch.js';
 import { ConversationSidebar } from './conversations/ConversationSidebar.js';
@@ -263,6 +268,25 @@ function App() {
 
   const handleSelectAgent = useCallback((id: number) => {
     transport.send({ type: 'focusAgent', id });
+  }, []);
+
+  // The overview panel's open state, remembered per browser.
+  const [overviewOpen, setOverviewOpen] = useState(() => {
+    try {
+      return window.localStorage.getItem(OVERVIEW_OPEN_STORAGE_KEY) === 'open';
+    } catch {
+      return false;
+    }
+  });
+  const toggleOverview = useCallback(() => {
+    setOverviewOpen((open) => {
+      try {
+        window.localStorage.setItem(OVERVIEW_OPEN_STORAGE_KEY, open ? 'closed' : 'open');
+      } catch {
+        // storage unavailable: the choice lasts for this page only
+      }
+      return !open;
+    });
   }, []);
 
   // The Intro's wire-facing state machine — which asks survive being mooted,
@@ -588,6 +612,17 @@ function App() {
               zoom={editor.zoom}
               onZoomChange={editor.handleZoomChange}
               sidebar={hasSidebar ? { open: sidebar.open, onToggle: sidebar.toggle } : undefined}
+              overview={{ open: overviewOpen, onToggle: toggleOverview }}
+            />
+          )}
+
+          {/* The boss's view of every agent, beside the zoom buttons. */}
+          {!isMobile && overviewOpen && (
+            <OverviewPanel
+              officeState={officeState}
+              agents={agents}
+              agentTools={agentTools}
+              onSelectAgent={handleCardSelect}
             />
           )}
 

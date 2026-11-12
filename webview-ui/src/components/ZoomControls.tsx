@@ -16,6 +16,8 @@ interface ZoomControlsProps {
   onZoomChange: (zoom: number) => void;
   /** The conversation sidebar's toggle, above the zoom buttons (only where there is a sidebar). */
   sidebar?: { open: boolean; onToggle: () => void };
+  /** The overview panel's toggle, below the zoom buttons. */
+  overview?: { open: boolean; onToggle: () => void };
 }
 
 /**
@@ -87,7 +89,7 @@ export function MobileZoomLevel({ zoom }: { zoom: number }) {
   );
 }
 
-export function ZoomControls({ zoom, onZoomChange, sidebar }: ZoomControlsProps) {
+export function ZoomControls({ zoom, onZoomChange, sidebar, overview }: ZoomControlsProps) {
   const flash = useZoomFlash(zoom);
   const [hovered, setHovered] = useState(false);
   // Bumped per toggle: remounts the icon so its pop plays (never on first paint).
@@ -149,6 +151,18 @@ export function ZoomControls({ zoom, onZoomChange, sidebar }: ZoomControlsProps)
             className="left-full top-1/2 -translate-y-1/2 ml-12"
           />
         </div>
+        {overview && (
+          <Button
+            size="icon_lg"
+            variant={overview.open ? 'active' : 'default'}
+            onClick={overview.onToggle}
+            aria-pressed={overview.open}
+            className="border-border! shadow-pixel mt-4"
+            title={overview.open ? 'Hide overview' : 'Overview of all agents'}
+          >
+            <PixelIcon name="menu" />
+          </Button>
+        )}
       </div>
     </>
   );
