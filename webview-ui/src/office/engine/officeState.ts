@@ -148,6 +148,9 @@ export class OfficeState {
   readonly idleSince = new Map<number, number>();
   /** Agents whose last turn ended on an error: the label reads "Error". */
   readonly errored = new Set<number>();
+  /** Agents whose turn ended with background tasks still running, and how
+   *  many: the label reads "Waiting · 1 job" instead of "Done". */
+  readonly backgroundTasks = new Map<number, number>();
 
   /**
    * The first-run consent greeter, deliberately NOT in `characters`.

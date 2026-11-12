@@ -487,6 +487,9 @@ export function useExtensionMessages(
         for (const id of Object.keys((msg.errors || {}) as Record<string, boolean>)) {
           os.errored.add(Number(id));
         }
+        for (const [id, n] of Object.entries((msg.background || {}) as Record<string, number>)) {
+          os.backgroundTasks.set(Number(id), n);
+        }
         // Every group label first: an agent with no group must already know
         // which Areas belong to groups when it is seated.
         for (const zone of Object.values(zones)) os.zoneLabels.add(zone);
@@ -650,6 +653,7 @@ export function useExtensionMessages(
           os.wakeAgent(id);
           os.regroupAgent(id);
           os.errored.delete(id);
+          os.backgroundTasks.delete(id);
         } else {
           // A finished turn: when it ended (the server's reading of the
           // transcript; a resend carries none, so keep what is known) and
@@ -657,6 +661,12 @@ export function useExtensionMessages(
           const since = typeof msg.idleSince === 'number' ? msg.idleSince : os.idleSince.get(id);
           os.idleSince.set(id, since ?? Date.now());
           if (msg.error === true) os.errored.add(id);
+          // A resend (no idleSince) carries no count: keep the one known.
+          if (typeof msg.background === 'number' && msg.background > 0) {
+            os.backgroundTasks.set(id, msg.background);
+          } else if (typeof msg.idleSince === 'number') {
+            os.backgroundTasks.delete(id);
+          }
         }
         markSeenActivity(id);
         setAgentStatuses((prev) => {

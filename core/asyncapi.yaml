@@ -316,6 +316,11 @@ components:
           description: Map of agent ID (string) to true for agents whose last turn ended on an error.
           additionalProperties:
             type: boolean
+        background:
+          type: object
+          description: Map of agent ID (string) to background tasks still running (agents not mid-turn).
+          additionalProperties:
+            type: integer
 
     AgentStatus:
       description: Active vs waiting state for an agent (drives character animation).
@@ -354,6 +359,11 @@ components:
           description: >-
             With status "waiting": the turn ended on an error the CLI reported
             (rate limit, overload…), not on an answer. The office labels it "Error".
+        background:
+          type: integer
+          description: >-
+            With status "waiting": background tasks the session started and is
+            still waiting on. The office labels it "Waiting · N jobs", not "Done".
 
     AgentActivityStatus:
       description: Activity state of an agent.

@@ -43,6 +43,11 @@ const ERROR_ACTIVITY_TEXT = 'Error';
 const MS_PER_MINUTE = 60_000;
 const MINUTES_PER_HOUR = 60;
 
+/** The turn ended but background jobs it started are still running. */
+function backgroundActivityText(jobs: number): string {
+  return `Waiting · ${jobs} ${jobs === 1 ? 'job' : 'jobs'}`;
+}
+
 /** "Done", then "Done · 5m", "Done · 1h 5m": the last turn finished, and how long ago. */
 function doneActivityText(elapsedMs: number): string {
   const minutes = Math.floor(Math.max(0, elapsedMs) / MS_PER_MINUTE);
@@ -293,6 +298,8 @@ export function ToolOverlay({
               activityText = THINKING_ACTIVITY_TEXT;
             } else if (officeState.errored.has(id)) {
               activityText = ERROR_ACTIVITY_TEXT;
+            } else if (officeState.backgroundTasks.has(id)) {
+              activityText = backgroundActivityText(officeState.backgroundTasks.get(id)!);
             } else if (since !== undefined) {
               activityText = doneActivityText(now - since);
             }

@@ -24,13 +24,21 @@ const KIND_STYLE: Record<AgentStatusKind, { label: string; text: string }> = {
   attention: { label: 'Needs you', text: 'text-status-permission' },
   error: { label: 'Error', text: 'text-status-error' },
   working: { label: 'Working', text: 'text-accent-bright' },
+  background: { label: 'Background', text: 'text-accent-bright' },
   done: { label: 'Done', text: 'text-status-success' },
   idle: { label: 'Idle', text: 'text-text-muted' },
   sleeping: { label: 'Asleep', text: 'text-text-muted' },
 };
 
 /** The summary chips at the top, in this order. */
-const SUMMARY_KINDS: AgentStatusKind[] = ['attention', 'error', 'working', 'done', 'sleeping'];
+const SUMMARY_KINDS: AgentStatusKind[] = [
+  'attention',
+  'error',
+  'working',
+  'background',
+  'done',
+  'sleeping',
+];
 
 interface Row {
   id: number;
@@ -76,7 +84,13 @@ export function OverviewPanel({ officeState, agents, agentTools, onSelectAgent }
       id,
       title: ch.title || ch.directoryName || `Agent ${id}`,
       zone: ch.zone || OVERVIEW_OTHER_ZONE,
-      kind: agentStatusKind(ch, agentTools[id], officeState.errored.has(id), idleSince),
+      kind: agentStatusKind(
+        ch,
+        agentTools[id],
+        officeState.errored.has(id),
+        idleSince,
+        officeState.backgroundTasks.get(id) ?? 0,
+      ),
       idleSince,
     });
   }

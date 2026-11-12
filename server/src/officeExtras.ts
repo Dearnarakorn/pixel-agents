@@ -75,6 +75,9 @@ export function attachTitlesToStatus(store: AgentStateStore): void {
       if (agent && message.status === 'waiting' && message.sleeping !== true) {
         message.idleSince = agentIdleSince(agent) ?? Date.now();
         if (agent.turnErrored) message.error = true;
+        // A turn that ended with background work still running is waiting on it.
+        const background = agentBackgroundTasks(agent);
+        if (background > 0) message.background = background;
       }
     }
     broadcast(message);
@@ -107,21 +110,37 @@ function agentIdleSince(agent: AgentState): number | undefined {
   return exchangedAt ?? mtime;
 }
 
-/** For `existingAgents`: when each agent that is not mid-turn went quiet, and
- *  which of them ended their last turn on an error. Keyed by agent id. */
+/** Background tasks the agent's session is still waiting on (0 when none, or
+ *  when the provider cannot tell). */
+function agentBackgroundTasks(agent: AgentState): number {
+  if (!agent.jsonlFile) return 0;
+  try {
+    return getHookProvider()?.backgroundTasksRunning?.(agent.jsonlFile) ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** For `existingAgents`: when each agent that is not mid-turn went quiet,
+ *  which of them ended their last turn on an error, and how many background
+ *  tasks each is waiting on. Keyed by agent id. */
 export function agentIdleStates(store: AgentStateStore): {
   idleSince: Record<number, number>;
   errors: Record<number, boolean>;
+  background: Record<number, number>;
 } {
   const idleSince: Record<number, number> = {};
   const errors: Record<number, boolean> = {};
+  const background: Record<number, number> = {};
   for (const [id, agent] of store) {
     if (agent.turnActive) continue;
     const since = agentIdleSince(agent);
     if (since !== undefined) idleSince[id] = since;
     if (agent.turnErrored) errors[id] = true;
+    const running = agentBackgroundTasks(agent);
+    if (running > 0) background[id] = running;
   }
-  return { idleSince, errors };
+  return { idleSince, errors, background };
 }
 
 // ── Session links ────────────────────────────────────────────
@@ -258,7 +277,8 @@ export function sleepAndPrune(store: AgentStateStore, skip: ReadonlySet<number>)
       idleMs > DUPLICATE_TITLE_IDLE_MS;
     if (idleMs > removeAfterMs || superseded) {
       remove.push(id);
-    } else if (idleMs > sleepAfterMs) {
+    } else if (idleMs > sleepAfterMs && agentBackgroundTasks(agent) === 0) {
+      // Waiting on a background job is not asleep: a long job keeps it at its desk.
       store.broadcast({ type: 'agentStatus', id, status: 'waiting', sleeping: true });
     }
   }

@@ -7,19 +7,28 @@ import type { Character, ToolActivity } from './types.js';
  * last turn is an error; a turn under way is working; asleep beats done.
  * DOM-free (the office engine runs under Node in the unit tests).
  */
-export type AgentStatusKind = 'attention' | 'error' | 'working' | 'done' | 'sleeping' | 'idle';
+export type AgentStatusKind =
+  | 'attention'
+  | 'error'
+  | 'working'
+  | 'background'
+  | 'done'
+  | 'sleeping'
+  | 'idle';
 
 export function agentStatusKind(
   ch: Character,
   tools: readonly ToolActivity[] | undefined,
   errored: boolean,
   idleSince: number | undefined,
+  backgroundTasks = 0,
 ): AgentStatusKind {
   if (ch.bubbleType === 'permission') return 'attention';
   if (tools?.some((t) => !t.done && t.permissionWait)) return 'attention';
   if (ch.bubbleType === 'waiting' && ch.waitingAwaitingInput) return 'attention';
   if (ch.isActive) return 'working';
   if (errored) return 'error';
+  if (backgroundTasks > 0) return 'background';
   if (ch.sleeping) return 'sleeping';
   if (idleSince !== undefined) return 'done';
   return 'idle';
@@ -30,7 +39,8 @@ export const STATUS_KIND_ORDER: Record<AgentStatusKind, number> = {
   attention: 0,
   error: 1,
   working: 2,
-  done: 3,
-  idle: 4,
-  sleeping: 5,
+  background: 3,
+  done: 4,
+  idle: 5,
+  sleeping: 6,
 };

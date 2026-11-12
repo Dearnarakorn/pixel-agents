@@ -23,6 +23,7 @@ import {
   CLAUDE_SUBAGENT_TOOLS,
   CLAUDE_TERMINAL_NAME_PREFIX,
 } from './constants.js';
+import { backgroundTasksRunning } from './backgroundTasks.js';
 import { conversationTitle } from './conversationTitle.js';
 import { lastActivityAt } from './lastActivity.js';
 import { isInheritedClaudeSessionEnv } from './sessionEnv.js';
@@ -351,6 +352,7 @@ export const claudeProvider: HookProvider = {
   conversationTitle,
   sessionLink,
   lastActivityAt,
+  backgroundTasksRunning,
 
   team: claudeTeamProvider,
   usageBridge: claudeUsageBridge,

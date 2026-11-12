@@ -225,6 +225,10 @@ export interface HookProvider {
    *  nobody is using. Used to decide which sessions are worth adopting and how
    *  long an agent has been idle. Undefined method = mtime is all there is. */
   lastActivityAt?(transcriptPath: string): number | undefined;
+  /** How many background tasks (commands run in the background, not agents)
+   *  the session started and has not been told have finished. A turn that ends
+   *  with some running is waiting on them, not done. Undefined method = 0. */
+  backgroundTasksRunning?(transcriptPath: string): number;
 
   /** Optional account-usage reporting (the office's usage bars). */
   readonly usageBridge?: UsageBridge;
