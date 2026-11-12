@@ -83,15 +83,28 @@ export function attachTitlesToStatus(store: AgentStateStore): void {
 
 // ── Finished turns ───────────────────────────────────────────
 
-/** When the agent's transcript was last written (ms since epoch) — the moment
- *  its last turn ended, for an agent that is not in one. */
+/**
+ * When the agent last had a real exchange (ms since epoch) — the moment its
+ * last turn ended, for an agent that is not in one. The provider reads it from
+ * the transcript; a provider that cannot falls back to the file's mtime, which
+ * also covers a transcript whose last exchange is not in the part that is read.
+ * Undefined when the transcript is gone.
+ */
 function agentIdleSince(agent: AgentState): number | undefined {
   if (!agent.jsonlFile) return undefined;
+  let mtime: number;
   try {
-    return fs.statSync(agent.jsonlFile).mtimeMs;
+    mtime = fs.statSync(agent.jsonlFile).mtimeMs;
   } catch {
     return undefined;
   }
+  let exchangedAt: number | undefined;
+  try {
+    exchangedAt = getHookProvider()?.lastActivityAt?.(agent.jsonlFile);
+  } catch {
+    exchangedAt = undefined;
+  }
+  return exchangedAt ?? mtime;
 }
 
 /** For `existingAgents`: when each agent that is not mid-turn went quiet, and
@@ -226,12 +239,10 @@ export function sleepAndPrune(store: AgentStateStore, skip: ReadonlySet<number>)
   for (const [id, agent] of store) {
     // Teammates share their lead's lifecycle; leave them to it.
     if (!agent.isExternal || agent.leadAgentId !== undefined || skip.has(id)) continue;
-    let mtime: number;
-    try {
-      mtime = fs.statSync(agent.jsonlFile).mtimeMs;
-    } catch {
-      continue;
-    }
+    // Idle time counts from the last real exchange, not from the file's mtime:
+    // bookkeeping appended to an unused session must not make it look fresh.
+    const mtime = agentIdleSince(agent);
+    if (mtime === undefined) continue;
     const title = agentTitle(agent);
     rows.push({ id, agent, mtime, title });
     if (title && (newestByTitle.get(title) ?? 0) < mtime) newestByTitle.set(title, mtime);

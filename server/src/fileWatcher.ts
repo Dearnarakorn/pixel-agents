@@ -1373,6 +1373,10 @@ export function scanExternalDir(
     } catch {
       continue;
     }
+    // A fresh mtime is not proof of use (see HookProvider.lastActivityAt): the
+    // last real exchange has to be recent too.
+    const exchangedAt = hookProvider?.lastActivityAt?.(file);
+    if (exchangedAt !== undefined && now - exchangedAt > EXTERNAL_ACTIVE_THRESHOLD_MS) continue;
 
     // Content check with two-tick delay for /clear files:
     // First tick: skip /clear files (give per-agent 3s to claim for internal /clear).
@@ -1477,6 +1481,10 @@ function scanGlobalProjectDirs(
       } catch {
         continue;
       }
+      // A fresh mtime is not proof of use (see HookProvider.lastActivityAt):
+      // the last real exchange has to be recent too.
+      const exchangedAt = hookProvider?.lastActivityAt?.(file);
+      if (exchangedAt !== undefined && now - exchangedAt > GLOBAL_SCAN_ACTIVE_MAX_AGE_MS) continue;
 
       const directoryName =
         directoryNameResolver?.({ projectDir: dirPath }) ??

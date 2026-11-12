@@ -24,6 +24,7 @@ import {
   CLAUDE_TERMINAL_NAME_PREFIX,
 } from './constants.js';
 import { conversationTitle } from './conversationTitle.js';
+import { lastActivityAt } from './lastActivity.js';
 import { isInheritedClaudeSessionEnv } from './sessionEnv.js';
 import { sessionLink } from './sessionLink.js';
 
@@ -349,6 +350,7 @@ export const claudeProvider: HookProvider = {
   isInheritedSessionEnv: isInheritedClaudeSessionEnv,
   conversationTitle,
   sessionLink,
+  lastActivityAt,
 
   team: claudeTeamProvider,
   usageBridge: claudeUsageBridge,

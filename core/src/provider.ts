@@ -219,6 +219,12 @@ export interface HookProvider {
    *  opens it when an agent without a terminal is clicked a second time.
    *  Undefined method = this provider has no such app. */
   sessionLink?(sessionId: string): string | undefined;
+  /** When the session last had a real exchange (ms since epoch), read from its
+   *  transcript, or undefined when that cannot be told. A transcript's
+   *  modification time is not this: a CLI may append bookkeeping to sessions
+   *  nobody is using. Used to decide which sessions are worth adopting and how
+   *  long an agent has been idle. Undefined method = mtime is all there is. */
+  lastActivityAt?(transcriptPath: string): number | undefined;
 
   /** Optional account-usage reporting (the office's usage bars). */
   readonly usageBridge?: UsageBridge;
