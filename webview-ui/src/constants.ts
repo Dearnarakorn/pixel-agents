@@ -251,6 +251,8 @@ export const CAMERA_FOLLOW_STORAGE_KEY = 'pixel-agents.cameraFollow';
 export const DESKTOP_NOTIFY_STORAGE_KEY = 'pixel-agents.desktopNotify';
 /** localStorage key for Cat Mode (every agent drawn as a cat; per browser, off by default). */
 export const CAT_MODE_STORAGE_KEY = 'pixel-agents.catMode';
+/** Cat Mode sheets: every frame is this many pixels square (a side-on cat is long). */
+export const CAT_FRAME_PX = 32;
 /** Cat Mode coats, in the order agents get them (alternating light and dark so neighbours differ). */
 export const CAT_COAT_ORDER = [
   'ginger',
@@ -450,6 +452,8 @@ export const TERMINAL_HIDE_RIBBON_REST_RATIO = 0.75;
 export const MUGSHOT_CROP_TOP_ROW = 0;
 export const MUGSHOT_CROP_LEFT_COL = -1;
 export const MUGSHOT_CROP_SIDE_PX = 20;
+/** A person's sprite width; a wider one (Cat Mode) gets a centred mug-shot crop. */
+export const MUGSHOT_PERSON_SPRITE_W = 16;
 /** Integer sprite-pixel zoom. 2 = each sprite pixel is 2 px. */
 export const MUGSHOT_RENDER_ZOOM = 2;
 /** A Directory's default characters, inline in the launch drawer: mug shots

@@ -4,6 +4,7 @@ import {
   MUGSHOT_CROP_LEFT_COL,
   MUGSHOT_CROP_SIDE_PX,
   MUGSHOT_CROP_TOP_ROW,
+  MUGSHOT_PERSON_SPRITE_W,
   MUGSHOT_RENDER_ZOOM,
 } from '../constants.js';
 import { getCachedSprite } from '../office/sprites/spriteCache.js';
@@ -50,12 +51,24 @@ export function CharacterMugShot({
     const front = getCharacterSprites(palette, repeat).walk[Direction.DOWN][0];
     const full = getCachedSprite(front, zoom);
 
+    // A person's 16-wide sprite crops at the fixed head square. A wider sprite
+    // (Cat Mode's 32x32 frames, the cat low in the frame) is cropped centred,
+    // from just above its first drawn row.
+    const width = front[0]?.length ?? 0;
+    let left = MUGSHOT_CROP_LEFT_COL;
+    let top = cropTop;
+    if (width > MUGSHOT_PERSON_SPRITE_W) {
+      left = Math.floor((width - MUGSHOT_CROP_SIDE_PX) / 2);
+      const firstRow = front.findIndex((row) => row.some((px) => px !== ''));
+      top = Math.max(0, firstRow - 1);
+    }
+
     const side = MUGSHOT_CROP_SIDE_PX * zoom;
     canvas.width = side;
     canvas.height = side;
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, side, side);
-    ctx.drawImage(full, MUGSHOT_CROP_LEFT_COL * zoom, cropTop * zoom, side, side, 0, 0, side, side);
+    ctx.drawImage(full, left * zoom, top * zoom, side, side, 0, 0, side, side);
   }, [palette, repeat, zoom, cropTop, sprites]);
 
   return (
