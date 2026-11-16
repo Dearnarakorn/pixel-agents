@@ -4,6 +4,7 @@ import type { HookProvider } from '../../core/src/provider.js';
 import type { AgentStateStore } from './agentStateStore.js';
 import { launchSpawn, readCompletionNotices } from './backgroundSpawns.js';
 import {
+  JSONL_TOOL_EVENTS_WITH_HOOKS,
   TEXT_IDLE_DELAY_MS,
   THINKING_SILENCE_TIMEOUT_MS,
   TOOL_DONE_DELAY_MS,
@@ -292,7 +293,9 @@ export function processTranscriptLine(
             if (isTeammateSpawn) {
               (agent.teammateSpawnToolIds ??= new Set()).add(block.id);
             }
-            const useJsonlToolEvents = agent.hookDelivered && hasInlineTeammates(agentId, agents);
+            const useJsonlToolEvents =
+              JSONL_TOOL_EVENTS_WITH_HOOKS ||
+              (agent.hookDelivered && hasInlineTeammates(agentId, agents));
             if (!agent.hookDelivered || useJsonlToolEvents || isSubagentSpawn) {
               const runInBackground = isSubagentSpawn && block.input?.run_in_background === true;
               agents.broadcast({
@@ -461,7 +464,9 @@ export function processTranscriptLine(
               // (which always use JSONL path for consistent sub-agent lifecycle).
               const isCompletedAgentTool =
                 completedToolName === 'Task' || completedToolName === 'Agent';
-              const useJsonlToolEvents = agent.hookDelivered && hasInlineTeammates(agentId, agents);
+              const useJsonlToolEvents =
+                JSONL_TOOL_EVENTS_WITH_HOOKS ||
+                (agent.hookDelivered && hasInlineTeammates(agentId, agents));
               if (!agent.hookDelivered || useJsonlToolEvents || isCompletedAgentTool) {
                 const toolId = completedToolId;
                 setTimeout(() => {

@@ -43,6 +43,11 @@ export const DUPLICATE_TITLE_IDLE_MS = 300_000;
  *  the turn is taken as over. Long, because a model can think for minutes
  *  before its first record; it only has to end a turn that never answers. */
 export const THINKING_SILENCE_TIMEOUT_MS = 180_000;
+/** Tool starts and ends are read from the transcript even for an agent whose
+ *  hooks are flowing: this fork installs only the low-frequency hook events
+ *  (no PreToolUse / PostToolUse), so with hooks on no tool would ever show and
+ *  every agent would read "Thinking" for its whole turn. */
+export const JSONL_TOOL_EVENTS_WITH_HOOKS = true;
 /** File under ~/.pixel-agents holding the project-group rules. */
 export const ZONES_FILE_NAME = 'zones.json';
 /** How long a read of that file is reused before it is read again. */
