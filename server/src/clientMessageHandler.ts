@@ -15,6 +15,8 @@ import {
 import {
   getHooksConsent,
   getHooksEnabled,
+  isOfficeTheme,
+  type OfficeTheme,
   readConfig,
   setHooksEnabled,
   writeConfig,
@@ -109,6 +111,12 @@ const KEY_HOOKS_INFO_SHOWN = 'pixel-agents.hooksInfoShown';
 const KEY_SHOW_AREAS = 'pixel-agents.showAreas';
 const KEY_BYPASS_PERMISSIONS = 'pixel-agents.bypassPermissions';
 const KEY_SHOW_HOST_DIRECTORIES = 'pixel-agents.showHostDirectories';
+const KEY_OFFICE_THEME = 'pixel-agents.officeTheme';
+
+function officeThemeOf(adapter: StateAdapter | undefined): OfficeTheme {
+  const theme = adapter?.getSetting<unknown>(KEY_OFFICE_THEME, 'office');
+  return isOfficeTheme(theme) ? theme : 'office';
+}
 
 /** The provider whose conversations the sidebar lists and resumes: the first
  *  that names them and can launch (HookProvider.conversationTitle). */
@@ -464,6 +472,14 @@ export function handleClientMessage(
       break;
     }
 
+    case 'setOfficeTheme': {
+      if (!isOfficeTheme(msg.theme) || !adapter) break;
+      adapter.setSetting(KEY_OFFICE_THEME, msg.theme);
+      // One look for every open office: each browser redraws on the broadcast.
+      store.broadcast({ type: 'officeThemeUpdated', theme: officeThemeOf(adapter) });
+      break;
+    }
+
     case 'setShowHostDirectories': {
       if (typeof msg.enabled !== 'boolean' || !adapter) break;
       adapter.setSetting(KEY_SHOW_HOST_DIRECTORIES, msg.enabled);
@@ -803,6 +819,7 @@ function settingsSnapshot(adapter: StateAdapter | undefined) {
     showAreas: adapter?.getSetting(KEY_SHOW_AREAS, false) ?? false,
     bypassPermissions: adapter?.getSetting(KEY_BYPASS_PERMISSIONS, false) ?? false,
     showHostDirectories: adapter?.getSetting(KEY_SHOW_HOST_DIRECTORIES, false) ?? false,
+    officeTheme: officeThemeOf(adapter),
   } as const;
 }
 
@@ -844,6 +861,7 @@ function refuseReadOnly(
     case 'setShowAreas':
     case 'setBypassPermissions':
     case 'setShowHostDirectories':
+    case 'setOfficeTheme':
       send(settingsSnapshot(ctx.store.getAdapter()));
       return;
     case 'addExternalAssetDirectory':

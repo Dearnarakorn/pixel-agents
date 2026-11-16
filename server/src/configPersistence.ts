@@ -23,6 +23,15 @@ export interface AdapterSettings {
   /** Whether the host's own Directories (VS Code's workspace folders, standalone's
    *  start directory) are listed in the launch drawer. Off by default. */
   showHostDirectories: boolean;
+  /** The office's look for every browser on this host: 'office' or 'cat'. */
+  officeTheme: OfficeTheme;
+}
+
+export const OFFICE_THEMES = ['office', 'cat'] as const;
+export type OfficeTheme = (typeof OFFICE_THEMES)[number];
+
+export function isOfficeTheme(value: unknown): value is OfficeTheme {
+  return typeof value === 'string' && (OFFICE_THEMES as readonly string[]).includes(value);
 }
 
 /** All keys in AdapterSettings. Used by adapters to map `pixel-agents.foo` → `foo`.
@@ -40,6 +49,7 @@ export const ADAPTER_SETTING_KEYS = [
   'areaMappings',
   'bypassPermissions',
   'showHostDirectories',
+  'officeTheme',
 ] as const;
 
 export type AdapterSettingKey = (typeof ADAPTER_SETTING_KEYS)[number];
@@ -97,6 +107,7 @@ const DEFAULT_ADAPTER_SETTINGS: AdapterSettings = {
   areaMappings: {},
   bypassPermissions: false,
   showHostDirectories: false,
+  officeTheme: 'office',
 };
 
 function getConfigFilePath(): string {
@@ -230,6 +241,9 @@ function parseAdapterSettings(raw: unknown): AdapterSettings {
       typeof obj.showHostDirectories === 'boolean'
         ? obj.showHostDirectories
         : DEFAULT_ADAPTER_SETTINGS.showHostDirectories,
+    officeTheme: isOfficeTheme(obj.officeTheme)
+      ? obj.officeTheme
+      : DEFAULT_ADAPTER_SETTINGS.officeTheme,
   };
 }
 

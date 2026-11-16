@@ -115,6 +115,7 @@ components:
         - $ref: '#/components/schemas/OfficeAccess'
         - $ref: '#/components/schemas/SettingsLoaded'
         - $ref: '#/components/schemas/BypassPermissionsUpdated'
+        - $ref: '#/components/schemas/OfficeThemeUpdated'
         - $ref: '#/components/schemas/HooksStatus'
         - $ref: '#/components/schemas/HooksConsentRequest'
         # Usage bars (the account's plan limits)
@@ -165,6 +166,7 @@ components:
         - $ref: '#/components/schemas/SaveCardOrder'
         - $ref: '#/components/schemas/SetShowAreas'
         - $ref: '#/components/schemas/SetBypassPermissions'
+        - $ref: '#/components/schemas/SetOfficeTheme'
         - $ref: '#/components/schemas/SetShowHostDirectories'
         - $ref: '#/components/schemas/SaveDirectory'
         - $ref: '#/components/schemas/RemoveDirectory'
@@ -843,6 +845,28 @@ components:
             Persistent per-host choice whether the host's own Directories (VS
             Code's workspace folders, standalone's start directory) are listed
             in `directoriesLoaded`. Off by default.
+        officeTheme:
+          $ref: '#/components/schemas/OfficeTheme'
+
+    OfficeTheme:
+      description: >-
+        The office's look, one per host for every browser: `office` (people,
+        the usual furniture) or `cat` (cats, cat furniture). Absent = `office`.
+      type: string
+      enum: [office, cat]
+
+    OfficeThemeUpdated:
+      description: >-
+        The host's office theme changed (an accepted `setOfficeTheme`).
+        Broadcast to every connected office, the sender included.
+      type: object
+      additionalProperties: false
+      required: [type, theme]
+      properties:
+        type:
+          const: officeThemeUpdated
+        theme:
+          $ref: '#/components/schemas/OfficeTheme'
 
     BypassPermissionsUpdated:
       description: |
@@ -1646,6 +1670,19 @@ components:
           const: setBypassPermissions
         enabled:
           type: boolean
+
+    SetOfficeTheme:
+      description: >-
+        Persist the host's office theme. Answered with an `officeThemeUpdated`
+        broadcast.
+      type: object
+      additionalProperties: false
+      required: [type, theme]
+      properties:
+        type:
+          const: setOfficeTheme
+        theme:
+          $ref: '#/components/schemas/OfficeTheme'
 
     SetShowHostDirectories:
       description: >-

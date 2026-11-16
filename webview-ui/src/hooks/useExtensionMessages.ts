@@ -27,6 +27,7 @@ import {
 } from '../office/toolUtils.js';
 import type { OfficeLayout, ToolActivity } from '../office/types.js';
 import { setWallSprites } from '../office/wallTiles.js';
+import { applyOfficeTheme, officeThemeFrom } from '../officeTheme.js';
 import { isBrowserRuntime, isE2E } from '../runtime.js';
 import { transport } from '../transport/index.js';
 import { onReconnect } from '../transport/onReconnect.js';
@@ -868,6 +869,7 @@ export function useExtensionMessages(
         if (typeof msg.showHostDirectories === 'boolean') {
           setShowHostDirectories(msg.showHostDirectories as boolean);
         }
+        applyOfficeTheme(officeThemeFrom(msg.officeTheme));
         if (Array.isArray(msg.externalAssetDirectories)) {
           setExternalAssetDirectories(msg.externalAssetDirectories as string[]);
         }
@@ -883,6 +885,9 @@ export function useExtensionMessages(
         if (typeof msg.enabled === 'boolean') {
           setBypassPermissions(msg.enabled);
         }
+      } else if (msg.type === 'officeThemeUpdated') {
+        // The host's theme changed (here or in another browser): every office follows.
+        applyOfficeTheme(officeThemeFrom(msg.theme));
       } else if (msg.type === 'hooksStatus') {
         if (typeof msg.installed === 'boolean' && typeof msg.providerId === 'string') {
           const providerId = msg.providerId as string;

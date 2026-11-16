@@ -26,6 +26,7 @@ import {
   layoutToSeats,
   layoutToTileMap,
 } from '../layout/layoutSerializer.js';
+import { themeFurnitureVersion } from '../layout/themeFurniture.js';
 import { findPath, getWalkableTiles, isWalkable } from '../layout/tileMap.js';
 import { pairWorkstations } from '../layout/workstations.js';
 import { getPetCount, getPetName } from '../sprites/petSpriteData.js';
@@ -83,6 +84,8 @@ export class OfficeState {
   seatWorkstations: Map<string, string> = new Map();
   /** The PCs lit in the current furniture instances. */
   private litPcs: ReadonlySet<string> = new Set();
+  /** The theme furniture version the furniture was last built with. */
+  private themeVersion = themeFurnitureVersion();
   blockedTiles: Set<string>;
   furniture: FurnitureInstance[];
   walkableTiles: Array<{ col: number; row: number }>;
@@ -1387,7 +1390,10 @@ export class OfficeState {
     const prevFrame = Math.floor(this.furnitureAnimTimer / FURNITURE_ANIM_INTERVAL_SEC);
     this.furnitureAnimTimer += dt;
     const newFrame = Math.floor(this.furnitureAnimTimer / FURNITURE_ANIM_INTERVAL_SEC);
-    if (newFrame !== prevFrame) {
+    // A theme switch redraws furniture too (themeFurniture.ts)
+    const themeVersion = themeFurnitureVersion();
+    if (newFrame !== prevFrame || themeVersion !== this.themeVersion) {
+      this.themeVersion = themeVersion;
       this.rebuildFurnitureInstances();
     }
 

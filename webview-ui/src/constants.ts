@@ -249,9 +249,7 @@ export const OVERVIEW_OPEN_STORAGE_KEY = 'pixel-agents.overviewOpen';
 export const CAMERA_FOLLOW_STORAGE_KEY = 'pixel-agents.cameraFollow';
 /** localStorage key for the desktop-notification preference (per browser, off by default). */
 export const DESKTOP_NOTIFY_STORAGE_KEY = 'pixel-agents.desktopNotify';
-/** localStorage key for Cat Mode (every agent drawn as a cat; per browser, off by default). */
-export const CAT_MODE_STORAGE_KEY = 'pixel-agents.catMode';
-/** Cat Mode sheets: every frame is this many pixels square (a side-on cat is long). */
+/** Cat theme sheets: every frame is this many pixels square (a side-on cat is long). */
 export const CAT_FRAME_PX = 32;
 /** Cat Mode coats, in the order agents get them (alternating light and dark so neighbours differ). */
 export const CAT_COAT_ORDER = [

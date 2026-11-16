@@ -1,18 +1,17 @@
 /**
- * Cat Mode: every agent in the office drawn as a real four-legged cat. Each
- * coat is a finished sheet (cats/<coat>.png, eyes open, and
- * cats/<coat>.blink.png, eyes shut) drawn by Task/_ref/make_cat_sheets.py:
+ * The Cat theme's agents: every agent in the office drawn as a real
+ * four-legged cat. Each coat is a finished sheet (cats/<coat>.png, eyes open,
+ * and cats/<coat>.blink.png, eyes shut) recoloured from the pet cat:
  * 3 direction rows (down, up, right) x 8 frames (walk1-3, type1-2, read1-2,
  * seated) like a person's sheet, but every frame 32x32, since a cat seen
  * side-on is long (the office centres a sprite on its own width). Only the
  * office and its mug shots change: the Characters view still edits the
- * people, and switching Cat Mode off brings them back. A per-browser
- * preference, off by default.
+ * people, and the Office theme brings them back.
  */
 
 import { rgbaToHex } from '../../../core/src/assets/colorUtils.js';
 import type { CharacterDirectionSprites } from '../../../core/src/assets/types.js';
-import { CAT_COAT_ORDER, CAT_FRAME_PX, CAT_MODE_STORAGE_KEY } from '../constants.js';
+import { CAT_COAT_ORDER, CAT_FRAME_PX } from '../constants.js';
 import { decodePng } from './loadWardrobe.js';
 import { type OfficeCatSheets, setOfficeCats } from './officeSprites.js';
 
@@ -73,19 +72,13 @@ export function loadCats(): Promise<OfficeCatSheets[]> {
   return loading;
 }
 
-function readPref(): boolean {
-  try {
-    return window.localStorage.getItem(CAT_MODE_STORAGE_KEY) === 'on';
-  } catch {
-    return false;
-  }
-}
+let catMode = false;
 
-let catMode = readPref();
-
-/** Hand the office its cats (once decoded) or take them away. */
-function applyCatMode(): void {
-  if (!catMode) {
+/** Draw the office's agents as cats or as people (the Cat theme, officeTheme.ts);
+ *  the office redraws them once the coats are loaded. */
+export function setCatMode(on: boolean): void {
+  catMode = on;
+  if (!on) {
     setOfficeCats(null);
     return;
   }
@@ -93,21 +86,3 @@ function applyCatMode(): void {
     if (catMode) setOfficeCats(cats);
   });
 }
-
-export function isCatMode(): boolean {
-  return catMode;
-}
-
-/** Switch Cat Mode; the office redraws its agents once the coats are loaded. */
-export function setCatMode(on: boolean): void {
-  catMode = on;
-  try {
-    window.localStorage.setItem(CAT_MODE_STORAGE_KEY, on ? 'on' : 'off');
-  } catch {
-    // storage unavailable: the choice lasts for this page only
-  }
-  applyCatMode();
-}
-
-// A page opened with Cat Mode on starts with cats.
-applyCatMode();
