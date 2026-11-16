@@ -2,6 +2,7 @@ import { type CSSProperties, useRef, useState } from 'react';
 
 import { isCameraFollowEnabled, setCameraFollowEnabled } from '../cameraFollow.js';
 import { NOTIFICATION_VOLUME_STEP_PCT } from '../constants.js';
+import { isDesktopNotifyEnabled, setDesktopNotifyEnabled } from '../desktopNotify.js';
 import { officeRadio } from '../music/musicEngine.js';
 import { useOfficeRadio } from '../music/useOfficeRadio.js';
 import {
@@ -86,6 +87,7 @@ export function SettingsModal({
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled);
   const [volumePct, setVolumePct] = useState(getNotificationVolumePct);
   const [cameraFollow, setCameraFollow] = useState(isCameraFollowEnabled);
+  const [desktopNotify, setDesktopNotify] = useState(isDesktopNotifyEnabled);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [assetDirDraft, setAssetDirDraft] = useState('');
   // Usage Bars: installing rewrites the user's status line, so it asks first
@@ -238,6 +240,16 @@ export function SettingsModal({
           />
           <PixelText text={`${volumePct}%`} className="w-44 justify-end shrink-0" />
         </label>
+        {isBrowserRuntime && (
+          <Checkbox
+            label="Desktop Notifications"
+            title="Pop a Windows/OS notification when an agent needs you or fails (this browser only; asks the browser for permission)"
+            checked={desktopNotify}
+            onChange={() => {
+              void setDesktopNotifyEnabled(!desktopNotify).then(setDesktopNotify);
+            }}
+          />
+        )}
         <Checkbox
           label="Camera Follows Selection"
           title="Move the view to an agent when you select it (this browser only)"

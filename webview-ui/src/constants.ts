@@ -247,6 +247,10 @@ export const OVERVIEW_OTHER_ZONE = 'Other';
 export const OVERVIEW_OPEN_STORAGE_KEY = 'pixel-agents.overviewOpen';
 /** localStorage key for the "camera follows the selected agent" preference (per browser). */
 export const CAMERA_FOLLOW_STORAGE_KEY = 'pixel-agents.cameraFollow';
+/** localStorage key for the desktop-notification preference (per browser, off by default). */
+export const DESKTOP_NOTIFY_STORAGE_KEY = 'pixel-agents.desktopNotify';
+/** How often the tab title and desktop notifications re-read the office. */
+export const ATTENTION_CHECK_MS = 1000;
 /** Layout Area labels (lower-cased) that make an Area a bedroom: sleeping
  *  agents rest on its seats. */
 export const BEDROOM_AREA_LABELS: readonly string[] = ['bedroom', 'ห้องนอน'];

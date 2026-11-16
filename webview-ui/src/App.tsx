@@ -29,6 +29,7 @@ import type { ConversationSearchScope } from './conversations/ConversationList.j
 import { ConversationSearch } from './conversations/ConversationSearch.js';
 import { ConversationSidebar } from './conversations/ConversationSidebar.js';
 import { useConversationSidebar } from './conversations/useConversationSidebar.js';
+import { useAttentionAlerts } from './hooks/useAttentionAlerts.js';
 import { useDirectoryEditor } from './hooks/useDirectoryEditor.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
 import { useEditorKeyboard } from './hooks/useEditorKeyboard.js';
@@ -475,6 +476,14 @@ function App() {
   );
 
   const officeState = getOfficeState();
+
+  // Agents needing you: counted in the tab title, and (Settings → Desktop
+  // Notifications) announced by the operating system. A press on a notification
+  // selects the agent; the hook opens its session itself.
+  const selectFromAlert = useCallback((agentId: number) => {
+    getOfficeState().selectAndFollow(agentId);
+  }, []);
+  useAttentionAlerts(officeState, agents, agentTools, selectFromAlert);
 
   // Merged set of Directories the Areas dropdown can map: host-contributed ones plus
   // every distinct Directory an agent has run in this session (deduped by name; name
