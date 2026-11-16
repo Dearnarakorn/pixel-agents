@@ -14,6 +14,7 @@ import { CAST_OFFICE_SYNC_MS } from '../constants.js';
 import { adjustSprite } from '../office/colorize.js';
 import { setCharacterTemplates } from '../office/sprites/spriteData.js';
 import type { CastState } from './cast.js';
+import { isCatMode, loadCats, loadedCats, subscribeCatMode } from './cats.js';
 import type { CharacterRenderer } from './renderer.js';
 import { repeatHueTurn, withRepeatClothes } from './repeatClothes.js';
 import { SHEET_W } from './sheet.js';
@@ -84,11 +85,39 @@ function blinkSprites(
   return withOpenReading(shut, officeSpritesOf(renderer.sheet(worn)));
 }
 
+/** A step through the coats per repeat, so two copies of a character wear different cats. */
+const CAT_REPEAT_STEP = 3;
+
+/**
+ * Cat Mode: every palette (profiles, then external sprites) wears a coat by
+ * its index, a repeat steps to another coat, a blink shuts the cat's eyes.
+ * False while the coats are still loading (the people stay until then).
+ */
+function syncCats(count: number): boolean {
+  const cats = loadedCats();
+  if (!cats.length) {
+    void loadCats().then(() => schedule(0));
+    return false;
+  }
+  const coat = (palette: number, repeat: number) =>
+    cats[(palette + repeat * CAT_REPEAT_STEP) % cats.length];
+  const sprites = Array.from({ length: count }, (_, i) => officeSpritesOf(coat(i, 0).open));
+  setCharacterTemplates(sprites, (palette, repeat, blink) => {
+    const c = coat(palette, repeat);
+    return officeSpritesOf(blink ? c.shut : c.open);
+  });
+  return true;
+}
+
 function sync(): void {
   timer = null;
   if (!source) return;
   const { renderer, profiles } = source.getState();
   if (!renderer || !profiles.length) return;
+  if (isCatMode() && syncCats(profiles.length + external.length)) {
+    synced = true;
+    return;
+  }
   const sprites = profiles.map((p) => officeSpritesOf(renderer.sheet(p)));
   // The repeats are drawn from this same cast, so they never fall out of step.
   setCharacterTemplates([...sprites, ...external], (palette, repeat, blink) => {
@@ -124,8 +153,10 @@ export function startOfficeSync(cast: CastSource): () => void {
     ({ renderer, profiles } = state);
     schedule(synced ? CAST_OFFICE_SYNC_MS : 0);
   });
+  const unsubscribeCats = subscribeCatMode(() => schedule(0));
   return () => {
     unsubscribe();
+    unsubscribeCats();
     if (timer) clearTimeout(timer);
     timer = null;
     if (source === cast) source = null;

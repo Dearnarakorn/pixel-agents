@@ -1,6 +1,7 @@
 import { type CSSProperties, useRef, useState } from 'react';
 
 import { isCameraFollowEnabled, setCameraFollowEnabled } from '../cameraFollow.js';
+import { isCatMode, setCatMode } from '../characters/cats.js';
 import { NOTIFICATION_VOLUME_STEP_PCT } from '../constants.js';
 import { isDesktopNotifyEnabled, setDesktopNotifyEnabled } from '../desktopNotify.js';
 import { officeRadio } from '../music/musicEngine.js';
@@ -88,6 +89,7 @@ export function SettingsModal({
   const [volumePct, setVolumePct] = useState(getNotificationVolumePct);
   const [cameraFollow, setCameraFollow] = useState(isCameraFollowEnabled);
   const [desktopNotify, setDesktopNotify] = useState(isDesktopNotifyEnabled);
+  const [catMode, setCatModeLocal] = useState(isCatMode);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [assetDirDraft, setAssetDirDraft] = useState('');
   // Usage Bars: installing rewrites the user's status line, so it asks first
@@ -258,6 +260,16 @@ export function SettingsModal({
             const next = !cameraFollow;
             setCameraFollowEnabled(next);
             setCameraFollow(next);
+          }}
+        />
+        <Checkbox
+          label="Cat Mode"
+          title="Draw every agent in the office as a cat (this browser only; the Characters view keeps the people)"
+          checked={catMode}
+          onChange={() => {
+            const next = !catMode;
+            setCatMode(next);
+            setCatModeLocal(next);
           }}
         />
         <Checkbox
