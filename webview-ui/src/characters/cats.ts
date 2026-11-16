@@ -10,6 +10,7 @@
 
 import { CAT_COAT_ORDER, CAT_MODE_STORAGE_KEY } from '../constants.js';
 import { decodePng } from './loadWardrobe.js';
+import { setOfficeCats } from './officeSprites.js';
 import { decodeSheet } from './sheet.js';
 
 /** './cats/ginger.png' → data URI (inlined, like the wardrobe, so canvases stay untainted). */
@@ -26,7 +27,6 @@ export interface CatSheets {
 }
 
 let loading: Promise<CatSheets[]> | null = null;
-let loaded: CatSheets[] = [];
 
 async function decodeCoat(coat: string): Promise<CatSheets | null> {
   const open = pngs[`./cats/${coat}.png`];
@@ -40,16 +40,10 @@ async function decodeCoat(coat: string): Promise<CatSheets | null> {
 
 /** The coats, decoded once, in CAT_COAT_ORDER (a coat that fails to decode is left out). */
 export function loadCats(): Promise<CatSheets[]> {
-  loading ??= Promise.all(CAT_COAT_ORDER.map(decodeCoat)).then((coats) => {
-    loaded = coats.filter((c): c is CatSheets => c !== null);
-    return loaded;
-  });
+  loading ??= Promise.all(CAT_COAT_ORDER.map(decodeCoat)).then((coats) =>
+    coats.filter((c): c is CatSheets => c !== null),
+  );
   return loading;
-}
-
-/** The coats decoded so far (empty until loadCats resolves). */
-export function loadedCats(): readonly CatSheets[] {
-  return loaded;
 }
 
 function readPref(): boolean {
@@ -61,13 +55,23 @@ function readPref(): boolean {
 }
 
 let catMode = readPref();
-const listeners = new Set<() => void>();
+
+/** Hand the office its cats (once decoded) or take them away. */
+function applyCatMode(): void {
+  if (!catMode) {
+    setOfficeCats(null);
+    return;
+  }
+  void loadCats().then((cats) => {
+    if (catMode) setOfficeCats(cats);
+  });
+}
 
 export function isCatMode(): boolean {
   return catMode;
 }
 
-/** Switch Cat Mode; the office redraws its agents (listeners) once the coats are loaded. */
+/** Switch Cat Mode; the office redraws its agents once the coats are loaded. */
 export function setCatMode(on: boolean): void {
   catMode = on;
   try {
@@ -75,10 +79,8 @@ export function setCatMode(on: boolean): void {
   } catch {
     // storage unavailable: the choice lasts for this page only
   }
-  for (const listener of listeners) listener();
+  applyCatMode();
 }
 
-export function subscribeCatMode(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
+// A page opened with Cat Mode on starts with cats.
+applyCatMode();

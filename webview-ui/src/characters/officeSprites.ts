@@ -14,7 +14,6 @@ import { CAST_OFFICE_SYNC_MS } from '../constants.js';
 import { adjustSprite } from '../office/colorize.js';
 import { setCharacterTemplates } from '../office/sprites/spriteData.js';
 import type { CastState } from './cast.js';
-import { isCatMode, loadCats, loadedCats, subscribeCatMode } from './cats.js';
 import type { CharacterRenderer } from './renderer.js';
 import { repeatHueTurn, withRepeatClothes } from './repeatClothes.js';
 import { SHEET_W } from './sheet.js';
@@ -88,17 +87,26 @@ function blinkSprites(
 /** A step through the coats per repeat, so two copies of a character wear different cats. */
 const CAT_REPEAT_STEP = 3;
 
+/** One Cat Mode coat: sheet pixels with eyes open and shut (characters/cats.ts). */
+export interface OfficeCatSheets {
+  open: Uint8ClampedArray;
+  shut: Uint8ClampedArray;
+}
+
+/** Cat Mode's coats while it is on, else null (set by characters/cats.ts, the DOM side). */
+let catSheets: readonly OfficeCatSheets[] | null = null;
+
+/** Cat Mode on (with its decoded coats) or off (null); the office redraws its agents. */
+export function setOfficeCats(sheets: readonly OfficeCatSheets[] | null): void {
+  catSheets = sheets && sheets.length ? sheets : null;
+  schedule(0);
+}
+
 /**
  * Cat Mode: every palette (profiles, then external sprites) wears a coat by
  * its index, a repeat steps to another coat, a blink shuts the cat's eyes.
- * False while the coats are still loading (the people stay until then).
  */
-function syncCats(count: number): boolean {
-  const cats = loadedCats();
-  if (!cats.length) {
-    void loadCats().then(() => schedule(0));
-    return false;
-  }
+function syncCats(cats: readonly OfficeCatSheets[], count: number): void {
   const coat = (palette: number, repeat: number) =>
     cats[(palette + repeat * CAT_REPEAT_STEP) % cats.length];
   const sprites = Array.from({ length: count }, (_, i) => officeSpritesOf(coat(i, 0).open));
@@ -106,7 +114,6 @@ function syncCats(count: number): boolean {
     const c = coat(palette, repeat);
     return officeSpritesOf(blink ? c.shut : c.open);
   });
-  return true;
 }
 
 function sync(): void {
@@ -114,7 +121,8 @@ function sync(): void {
   if (!source) return;
   const { renderer, profiles } = source.getState();
   if (!renderer || !profiles.length) return;
-  if (isCatMode() && syncCats(profiles.length + external.length)) {
+  if (catSheets) {
+    syncCats(catSheets, profiles.length + external.length);
     synced = true;
     return;
   }
@@ -153,10 +161,8 @@ export function startOfficeSync(cast: CastSource): () => void {
     ({ renderer, profiles } = state);
     schedule(synced ? CAST_OFFICE_SYNC_MS : 0);
   });
-  const unsubscribeCats = subscribeCatMode(() => schedule(0));
   return () => {
     unsubscribe();
-    unsubscribeCats();
     if (timer) clearTimeout(timer);
     timer = null;
     if (source === cast) source = null;
