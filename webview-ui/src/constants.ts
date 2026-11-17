@@ -277,11 +277,10 @@ export const CAT_ZOOM_SPEED_MUL = 2.6;
 export const CAT_SPOT_NEAREST = 6;
 /** A cat sitting on the floor is drawn this much lower: its sitting frames are lifted for chairs. */
 export const CAT_FLOOR_SIT_OFFSET_PX = 3;
-/** Furniture a cat goes to and sits by (its toys, posts, trees, bowls, the window). */
+/** Furniture a cat goes to and sits by (its toys, posts, trees, bowls, the window).
+ *  Not the meeting tables' laptops (PC_SIDE): their spots are beside other cats' cushions. */
 export const CAT_INTEREST_TYPES: readonly string[] = [
   'POT',
-  'PC_SIDE',
-  'PC_SIDE:left',
   'PLANT',
   'PLANT_2',
   'LARGE_PLANT',
