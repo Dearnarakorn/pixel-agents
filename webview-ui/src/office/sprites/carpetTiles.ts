@@ -29,6 +29,16 @@ let carpetVariantPalettes: Array<{ mainRgb: string | null; accentRgb: string | n
 /** Cache of fully-colorized + merged sprites, keyed by `${variant}:${msCase}:${paletteKey}`. */
 const carpetCache: Map<string, SpriteData> = new Map();
 
+/** The office theme's carpet pieces, keyed `${variant}:${msCase}` (themes/cat/CARPET_<v>_<case>.png):
+ *  drawn in place of that case's sprite, in the variant's own two greys (so it colours the same). */
+let themeCarpets: ReadonlyMap<string, SpriteData> | null = null;
+
+/** Set the theme's carpet pieces, or null for the usual ones. */
+export function setThemeCarpets(next: ReadonlyMap<string, SpriteData> | null): void {
+  themeCarpets = next;
+  carpetCache.clear();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Public API
 // ─────────────────────────────────────────────────────────────────────────────
@@ -99,8 +109,13 @@ export function getCarpetJunctionSprite(
   if (msCase === 0) return null;
 
   const variantSet = carpetSets[variant];
-  const baseSprite = variantSet?.[msCase];
-  if (!baseSprite) return null;
+  const usual = variantSet?.[msCase];
+  if (!usual) return null;
+  const themed = themeCarpets?.get(`${variant}:${msCase}`);
+  const baseSprite =
+    themed && themed.length === usual.length && themed[0]?.length === usual[0]?.length
+      ? themed
+      : usual;
 
   const palette = carpetVariantPalettes[variant];
   if (!palette || !palette.mainRgb) return null;

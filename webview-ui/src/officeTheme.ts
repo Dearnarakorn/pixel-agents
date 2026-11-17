@@ -14,6 +14,7 @@ import { setCatMode } from './characters/cats.js';
 import { decodePng } from './characters/loadWardrobe.js';
 import { setCatBehaviour } from './office/engine/catBehaviour.js';
 import { setThemeFloors } from './office/floorTiles.js';
+import { setThemeCarpets } from './office/sprites/carpetTiles.js';
 import { setThemeFurniture } from './office/layout/themeFurniture.js';
 import type { SpriteData } from './office/types.js';
 
@@ -65,19 +66,24 @@ export function applyOfficeTheme(next: OfficeTheme): void {
   if (cat) {
     void loadCatFurniture().then((sprites) => {
       if (theme !== 'cat') return;
-      // FLOOR_<n> art is a floor pattern, the rest furniture
+      // FLOOR_<n> art is a floor pattern, CARPET_<v>_<case> a carpet piece, the rest furniture
       const floors = new Map<number, SpriteData>();
+      const carpets = new Map<string, SpriteData>();
       const furniture = new Map<string, SpriteData>();
       for (const [key, sprite] of sprites) {
         const floor = /^FLOOR_(\d+)$/.exec(key);
+        const carpet = /^CARPET_(\d+)_(\d+)$/.exec(key);
         if (floor) floors.set(Number(floor[1]), sprite);
+        else if (carpet) carpets.set(`${carpet[1]}:${carpet[2]}`, sprite);
         else furniture.set(key, sprite);
       }
       setThemeFloors(floors);
+      setThemeCarpets(carpets);
       setThemeFurniture(furniture);
     });
   } else {
     setThemeFloors(null);
+    setThemeCarpets(null);
     setThemeFurniture(null);
   }
   for (const listener of listeners) listener();
