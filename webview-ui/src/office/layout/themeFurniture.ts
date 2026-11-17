@@ -26,7 +26,8 @@ export function themeFurnitureVersion(): number {
 
 /** The sprite to draw for `type`: the theme's when it has one of the same size, else `catalog`. */
 export function themedSprite(type: string, catalog: SpriteData): SpriteData {
-  const themed = sprites?.get(type);
+  // A mirrored variant ('SOFA_SIDE:left') draws its base type's art, flipped by the renderer.
+  const themed = sprites?.get(type) ?? sprites?.get(type.split(':')[0]);
   if (!themed || themed.length !== catalog.length || themed[0]?.length !== catalog[0]?.length) {
     return catalog;
   }
