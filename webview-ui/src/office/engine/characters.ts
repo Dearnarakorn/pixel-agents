@@ -492,14 +492,17 @@ function settle(ch: Character, facing: Direction | null): void {
 /** Get the correct sprite frame for a character's current state and direction */
 export function getCharacterSprite(ch: Character, sprites: CharacterSprites): SpriteData {
   switch (ch.state) {
-    case CharacterState.TYPE:
+    case CharacterState.TYPE: {
+      // A cat on a side seat sits facing front: the side-on sitting frames are not used.
+      const dir = isCatBehaviour() ? catSitDir(ch.dir) : ch.dir;
       // Resting in its chair (a turn over, or back from wandering). Helpers have no
       // chair: they stand once idle, and keep typing through the gaps between tools.
-      if (!ch.isActive && !ch.isSubagent) return sprites.seated[ch.dir];
+      if (!ch.isActive && !ch.isSubagent) return sprites.seated[dir];
       if (isReadingTool(ch.currentTool)) {
-        return sprites.reading[ch.dir][ch.frame % 2];
+        return sprites.reading[dir][ch.frame % 2];
       }
-      return sprites.typing[ch.dir][ch.frame % 2];
+      return sprites.typing[dir][ch.frame % 2];
+    }
     case CharacterState.WALK:
       return sprites.walk[ch.dir][ch.frame % 4];
     case CharacterState.IDLE:
