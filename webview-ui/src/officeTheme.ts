@@ -12,6 +12,7 @@ import { useSyncExternalStore } from 'react';
 import { rgbaToHex } from '../../core/src/assets/colorUtils.js';
 import { setCatMode } from './characters/cats.js';
 import { decodePng } from './characters/loadWardrobe.js';
+import { setCatBehaviour } from './office/engine/catBehaviour.js';
 import { setThemeFurniture } from './office/layout/themeFurniture.js';
 import type { SpriteData } from './office/types.js';
 
@@ -59,6 +60,7 @@ export function applyOfficeTheme(next: OfficeTheme): void {
   theme = next;
   const cat = next === 'cat';
   setCatMode(cat);
+  setCatBehaviour(cat);
   if (cat) {
     void loadCatFurniture().then((sprites) => {
       if (theme === 'cat') setThemeFurniture(sprites);

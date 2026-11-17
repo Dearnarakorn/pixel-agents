@@ -16,6 +16,7 @@ import {
   BUTTON_SHADOW_COLOR,
   CARPET_DEFAULT_ACCENT_COLOR,
   CARPET_DEFAULT_COLOR,
+  CAT_FLOOR_SIT_OFFSET_PX,
   CHARACTER_SITTING_OFFSET_PX,
   CHARACTER_Z_SORT_OFFSET,
   DELETE_BUTTON_BG,
@@ -396,7 +397,13 @@ export function renderScene(
     const spriteData = getCharacterSprite(ch, sprites);
     const cached = getCachedSprite(spriteData, zoom);
     // Sitting offset: shift character down when seated so they visually sit in the chair
-    const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0;
+    // (a cat sitting on the floor sits lower than one on a chair: its frames are lifted for seats)
+    const sittingOffset =
+      ch.state === CharacterState.TYPE
+        ? CHARACTER_SITTING_OFFSET_PX
+        : (ch.catSitSec ?? 0) > 0
+          ? CAT_FLOOR_SIT_OFFSET_PX
+          : 0;
     // Anchor at bottom-center of character — round to integer device pixels
     const drawX = Math.round(offsetX + ch.x * zoom - cached.width / 2);
     const drawY = Math.round(offsetY + (ch.y + sittingOffset) * zoom - cached.height);

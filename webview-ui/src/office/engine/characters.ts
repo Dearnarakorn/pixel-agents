@@ -1,4 +1,8 @@
 import {
+  CAT_NAP_SEC,
+  CAT_SIT_SEC,
+  CAT_SPOT_SIT_SEC,
+  CAT_ZOOM_SPEED_MUL,
   DEFAULT_MAX_CONTEXT_TOKENS,
   HELPER_FOLLOW_RADIUS_TILES,
   HELPER_STAND_UP_DELAY_SEC,
@@ -19,6 +23,7 @@ import { isReadingToolName } from '../toolUtils.js';
 import type { Character, Seat, SpriteData, TileType as TileTypeVal } from '../types.js';
 import { CharacterState, Direction, TILE_SIZE } from '../types.js';
 import { startBlink } from './blink.js';
+import { type CatSpot, chooseCatErrand, clearCatErrand, pickCatSpot } from './catBehaviour.js';
 
 /** Whether a tool should show the reading animation (vs typing). Taxonomy comes
  *  from the active HookProvider via the `providerCapabilities` message. */
@@ -95,6 +100,13 @@ export function createCharacter(
   };
 }
 
+/** What an idle cat can do in the Cat theme (catBehaviour.ts); null = people, no errands. */
+export interface CatContext {
+  spots: readonly CatSpot[];
+  /** A spot another cat is at or heading for. */
+  taken: (spot: CatSpot) => boolean;
+}
+
 export function updateCharacter(
   ch: Character,
   dt: number,
@@ -102,8 +114,13 @@ export function updateCharacter(
   seats: Map<string, Seat>,
   tileMap: TileTypeVal[][],
   blockedTiles: Set<string>,
+  cat: CatContext | null = null,
 ): void {
   ch.frameTimer += dt;
+  // Work, or the Office theme, ends any cat errand at once.
+  if ((ch.isActive || !cat) && (ch.catSitSec || ch.catSpot || (ch.speedMul ?? 1) !== 1)) {
+    clearCatErrand(ch);
+  }
 
   switch (ch.state) {
     case CharacterState.TYPE: {
@@ -129,6 +146,20 @@ export function updateCharacter(
     }
 
     case CharacterState.IDLE: {
+      // A cat sitting on the floor (by a toy, napping, or just sitting): tail swishes, then on.
+      if (cat && !ch.isActive && (ch.catSitSec ?? 0) > 0) {
+        ch.catSitSec = (ch.catSitSec ?? 0) - dt;
+        if (!ch.catNap && ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
+          ch.frameTimer -= TYPE_FRAME_DURATION_SEC;
+          ch.frame = (ch.frame + 1) % 2;
+        }
+        if (ch.catSitSec <= 0) {
+          clearCatErrand(ch);
+          ch.frame = 0;
+          ch.wanderTimer = randomRange(WANDER_PAUSE_MIN_SEC, WANDER_PAUSE_MAX_SEC) / 2;
+        }
+        break;
+      }
       // No idle animation — static pose
       ch.frame = 0;
       if (ch.seatTimer < 0) ch.seatTimer = 0; // clear turn-end sentinel
@@ -192,6 +223,11 @@ export function updateCharacter(
             }
           }
         }
+        if (cat && startCatErrand(ch, cat, walkableTiles, tileMap, blockedTiles)) {
+          ch.wanderCount++;
+          ch.wanderTimer = randomRange(WANDER_PAUSE_MIN_SEC, WANDER_PAUSE_MAX_SEC);
+          break;
+        }
         if (walkableTiles.length > 0) {
           const target = walkableTiles[Math.floor(Math.random() * walkableTiles.length)];
           const path = findPath(
@@ -217,9 +253,10 @@ export function updateCharacter(
     }
 
     case CharacterState.WALK: {
-      // Walk animation
-      if (ch.frameTimer >= WALK_FRAME_DURATION_SEC) {
-        ch.frameTimer -= WALK_FRAME_DURATION_SEC;
+      // Walk animation (quicker steps on a dash)
+      const frameSec = WALK_FRAME_DURATION_SEC / (ch.speedMul ?? 1);
+      if (ch.frameTimer >= frameSec) {
+        ch.frameTimer -= frameSec;
         ch.frame = (ch.frame + 1) % 4;
       }
 
@@ -228,6 +265,21 @@ export function updateCharacter(
         const center = tileCenter(ch.tileCol, ch.tileRow);
         ch.x = center.x;
         ch.y = center.y;
+        ch.speedMul = 1;
+
+        // A cat arriving where it was going: sit there facing the thing
+        const spot = ch.catSpot;
+        if (cat && !ch.isActive && spot && spot.col === ch.tileCol && spot.row === ch.tileRow) {
+          ch.catSpot = null;
+          ch.state = CharacterState.IDLE;
+          ch.dir = spot.dir;
+          ch.catSitSec = randomRange(CAT_SPOT_SIT_SEC[0], CAT_SPOT_SIT_SEC[1]);
+          ch.catNap = false;
+          ch.frame = 0;
+          ch.frameTimer = 0;
+          break;
+        }
+        ch.catSpot = null;
 
         if (ch.isActive) {
           if (!ch.seatId) {
@@ -307,7 +359,7 @@ function stepAlongPath(ch: Character, dt: number): void {
   const nextTile = ch.path[0];
   ch.dir = directionBetween(ch.tileCol, ch.tileRow, nextTile.col, nextTile.row);
 
-  ch.moveProgress += (WALK_SPEED_PX_PER_SEC / TILE_SIZE) * dt;
+  ch.moveProgress += ((WALK_SPEED_PX_PER_SEC * (ch.speedMul ?? 1)) / TILE_SIZE) * dt;
 
   const fromCenter = tileCenter(ch.tileCol, ch.tileRow);
   const toCenter = tileCenter(nextTile.col, nextTile.row);
@@ -436,10 +488,57 @@ export function getCharacterSprite(ch: Character, sprites: CharacterSprites): Sp
     case CharacterState.WALK:
       return sprites.walk[ch.dir][ch.frame % 4];
     case CharacterState.IDLE:
+      // A cat sitting on the floor: tail swishing, or still with its eyes shut (a nap)
+      if ((ch.catSitSec ?? 0) > 0) {
+        return ch.catNap ? sprites.seated[ch.dir] : sprites.typing[ch.dir][ch.frame % 2];
+      }
       return sprites.walk[ch.dir][1];
     default:
       return sprites.walk[ch.dir][1];
   }
+}
+
+/**
+ * A cat's errand when a wander pause ends: go and sit by something, nap or
+ * sit where it is, or dash somewhere. Returns false for an ordinary wander
+ * (or when the errand has nowhere to go), so the caller wanders instead.
+ */
+function startCatErrand(
+  ch: Character,
+  cat: CatContext,
+  walkableTiles: Array<{ col: number; row: number }>,
+  tileMap: TileTypeVal[][],
+  blockedTiles: Set<string>,
+): boolean {
+  const errand = chooseCatErrand();
+  if (errand === 'nap' || errand === 'sit') {
+    const [min, max] = errand === 'nap' ? CAT_NAP_SEC : CAT_SIT_SEC;
+    ch.catSitSec = randomRange(min, max);
+    ch.catNap = errand === 'nap';
+    if (ch.catNap) ch.blinkShut = ch.catSitSec; // eyes shut for the whole nap
+    // front or back only: the side-on sit is not used
+    if (ch.dir === Direction.LEFT || ch.dir === Direction.RIGHT) ch.dir = Direction.DOWN;
+    ch.frame = 0;
+    ch.frameTimer = 0;
+    return true;
+  }
+  let target: { col: number; row: number } | null = null;
+  if (errand === 'spot') {
+    target = pickCatSpot(ch, cat.spots, cat.taken);
+  } else if (errand === 'zoom' && walkableTiles.length > 0) {
+    target = walkableTiles[Math.floor(Math.random() * walkableTiles.length)];
+  }
+  if (!target) return false;
+  const path = findPath(ch.tileCol, ch.tileRow, target.col, target.row, tileMap, blockedTiles);
+  if (path.length === 0) return false;
+  ch.path = path;
+  ch.moveProgress = 0;
+  ch.state = CharacterState.WALK;
+  ch.frame = 0;
+  ch.frameTimer = 0;
+  if (errand === 'spot') ch.catSpot = target as CatSpot;
+  if (errand === 'zoom') ch.speedMul = CAT_ZOOM_SPEED_MUL;
+  return true;
 }
 
 /** Sit out a usual rest in the chair before standing up to wander. */

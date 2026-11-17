@@ -262,6 +262,36 @@ export const CAT_COAT_ORDER = [
   'tabby',
   'snow',
 ] as const;
+/** Cat theme idle errands (catBehaviour.ts): chance of each when a wander pause ends;
+ *  what is left over is an ordinary wander. */
+export const CAT_ERRAND_CHANCE = { spot: 0.35, nap: 0.12, sit: 0.13, zoom: 0.08 } as const;
+/** Seconds a cat sits at something it went to (a toy, the window, its bowl). */
+export const CAT_SPOT_SIT_SEC: readonly [number, number] = [8, 20];
+/** Seconds of a nap on the floor. */
+export const CAT_NAP_SEC: readonly [number, number] = [12, 28];
+/** Seconds of sitting in place, tail swishing. */
+export const CAT_SIT_SEC: readonly [number, number] = [4, 9];
+/** Zoomies: walk speed multiplier for the dash. */
+export const CAT_ZOOM_SPEED_MUL = 2.6;
+/** A spot is picked among this many nearest to the cat (so it goes to things in its room). */
+export const CAT_SPOT_NEAREST = 6;
+/** A cat sitting on the floor is drawn this much lower: its sitting frames are lifted for chairs. */
+export const CAT_FLOOR_SIT_OFFSET_PX = 3;
+/** Furniture a cat goes to and sits by (its toys, posts, trees, bowls, the window). */
+export const CAT_INTEREST_TYPES: readonly string[] = [
+  'POT',
+  'PC_SIDE',
+  'PC_SIDE:left',
+  'PLANT',
+  'PLANT_2',
+  'LARGE_PLANT',
+  'CACTUS',
+  'BIN',
+  'WHITEBOARD',
+  'PA_FLOOR_LAMP',
+  'PA_NIGHTSTAND_LAMP',
+  'PA_WARDROBE',
+];
 /** How often the tab title and desktop notifications re-read the office. */
 export const ATTENTION_CHECK_MS = 1000;
 /** Layout Area labels (lower-cased) that make an Area a bedroom: sleeping

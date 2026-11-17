@@ -250,6 +250,14 @@ export interface Character extends Blinker {
   sleeping?: boolean;
   /** Set once a sleeping agent holds a bedroom seat: its rest there never ends. */
   inBed?: boolean;
+  /** Cat theme, idle only (catBehaviour.ts): seconds left sitting on the floor, tail swishing. */
+  catSitSec?: number;
+  /** Cat theme: the floor sit is a nap (eyes shut, still). */
+  catNap?: boolean;
+  /** Cat theme: the spot this walk is heading for, sat at on arrival facing `dir`. */
+  catSpot?: { col: number; row: number; dir: Direction } | null;
+  /** Walk speed multiplier for the current path (a cat's zoomies); absent = 1. */
+  speedMul?: number;
   /** The seat a sleeping agent left for bed, to return to when it wakes. */
   homeSeatId?: string | null;
   /** Headless agent: adopted from outside the office, so there is no terminal to

@@ -43,7 +43,14 @@ import type {
 } from '../types.js';
 import { CharacterState, Direction, PetState, TILE_SIZE } from '../types.js';
 import { tickBlink } from './blink.js';
-import { createCharacter, restInChair, updateCharacter, updateHelper } from './characters.js';
+import { type CatSpot, catSpots, isCatBehaviour } from './catBehaviour.js';
+import {
+  type CatContext,
+  createCharacter,
+  restInChair,
+  updateCharacter,
+  updateHelper,
+} from './characters.js';
 import { advanceMatrixEffect, startMatrixEffect } from './matrixEffectState.js';
 import { createPet, updatePet } from './petEntity.js';
 import { anchorTile, closestFreeSeat } from './seatPlacement.js';
@@ -1146,6 +1153,33 @@ export class OfficeState {
     return lit;
   }
 
+  /** Cat spots, cached per layout (catBehaviour.ts). */
+  private catSpotCache: { furniture: unknown; blocked: unknown; spots: CatSpot[] } | null = null;
+
+  /** What idle cats can do this frame: the spots by their things, and which are taken. */
+  private catContext(): CatContext {
+    const furniture = this.layout.furniture;
+    if (
+      !this.catSpotCache ||
+      this.catSpotCache.furniture !== furniture ||
+      this.catSpotCache.blocked !== this.blockedTiles
+    ) {
+      const spots = catSpots(furniture, getCatalogEntry, (col, row) =>
+        isWalkable(col, row, this.tileMap, this.blockedTiles),
+      );
+      this.catSpotCache = { furniture, blocked: this.blockedTiles, spots };
+    }
+    const taken = new Set<string>();
+    for (const other of this.characters.values()) {
+      taken.add(`${other.tileCol},${other.tileRow}`);
+      if (other.catSpot) taken.add(`${other.catSpot.col},${other.catSpot.row}`);
+    }
+    return {
+      spots: this.catSpotCache.spots,
+      taken: (spot) => taken.has(`${spot.col},${spot.row}`),
+    };
+  }
+
   /** Rebuild furniture instances with auto-state applied (a working agent's PC turns ON) */
   private rebuildFurnitureInstances(lit = this.litWorkstations()): void {
     this.litPcs = lit;
@@ -1405,6 +1439,7 @@ export class OfficeState {
     }
 
     const toDelete: number[] = [];
+    const cat = isCatBehaviour() ? this.catContext() : null;
     for (const ch of this.characters.values()) {
       tickBlink(ch, dt, ch.state === CharacterState.TYPE);
       const effect = advanceMatrixEffect(ch, dt);
@@ -1430,7 +1465,15 @@ export class OfficeState {
       } else {
         // Temporarily unblock own seat so character can pathfind to it
         this.withOwnSeatUnblocked(ch, () =>
-          updateCharacter(ch, dt, this.walkableTiles, this.seats, this.tileMap, this.blockedTiles),
+          updateCharacter(
+            ch,
+            dt,
+            this.walkableTiles,
+            this.seats,
+            this.tileMap,
+            this.blockedTiles,
+            cat,
+          ),
         );
       }
 
