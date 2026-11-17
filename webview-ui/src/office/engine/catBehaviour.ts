@@ -14,7 +14,7 @@ import {
   CAT_SPOT_NEAREST,
 } from '../../constants.js';
 import type { Character, PlacedFurniture } from '../types.js';
-import { Direction } from '../types.js';
+import { CharacterState, Direction } from '../types.js';
 
 let catBehaviour = false;
 
@@ -25,6 +25,17 @@ export function setCatBehaviour(on: boolean): void {
 
 export function isCatBehaviour(): boolean {
   return catBehaviour;
+}
+
+/** The way a cat sits: front or back as it faces, a side-facing cat turns to the front
+ *  (the side-on sitting frames are not used). */
+export function catSitDir(dir: Direction): Direction {
+  return dir === Direction.LEFT || dir === Direction.RIGHT ? Direction.DOWN : dir;
+}
+
+/** Whether a character is drawn sitting on the floor (Cat theme, not walking, not in a seat). */
+export function catSitsOnFloor(ch: Pick<Character, 'state' | 'catSitSec'>): boolean {
+  return ch.state === CharacterState.IDLE && ((ch.catSitSec ?? 0) > 0 || catBehaviour);
 }
 
 export interface CatSpot {

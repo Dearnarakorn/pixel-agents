@@ -23,7 +23,14 @@ import { isReadingToolName } from '../toolUtils.js';
 import type { Character, Seat, SpriteData, TileType as TileTypeVal } from '../types.js';
 import { CharacterState, Direction, TILE_SIZE } from '../types.js';
 import { startBlink } from './blink.js';
-import { type CatSpot, chooseCatErrand, clearCatErrand, pickCatSpot } from './catBehaviour.js';
+import {
+  type CatSpot,
+  catSitDir,
+  chooseCatErrand,
+  clearCatErrand,
+  isCatBehaviour,
+  pickCatSpot,
+} from './catBehaviour.js';
 
 /** Whether a tool should show the reading animation (vs typing). Taxonomy comes
  *  from the active HookProvider via the `providerCapabilities` message. */
@@ -160,8 +167,16 @@ export function updateCharacter(
         }
         break;
       }
-      // No idle animation — static pose
-      ch.frame = 0;
+      if (cat) {
+        // A cat never stands frozen mid-step: between walks it sits, tail swishing.
+        if (ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
+          ch.frameTimer -= TYPE_FRAME_DURATION_SEC;
+          ch.frame = (ch.frame + 1) % 2;
+        }
+      } else {
+        // No idle animation — static pose
+        ch.frame = 0;
+      }
       if (ch.seatTimer < 0) ch.seatTimer = 0; // clear turn-end sentinel
       // If became active, pathfind to seat
       if (ch.isActive) {
@@ -492,6 +507,8 @@ export function getCharacterSprite(ch: Character, sprites: CharacterSprites): Sp
       if ((ch.catSitSec ?? 0) > 0) {
         return ch.catNap ? sprites.seated[ch.dir] : sprites.typing[ch.dir][ch.frame % 2];
       }
+      // Any other pause in the Cat theme: sit facing front or back (never a frozen side step)
+      if (isCatBehaviour()) return sprites.typing[catSitDir(ch.dir)][ch.frame % 2];
       return sprites.walk[ch.dir][1];
     default:
       return sprites.walk[ch.dir][1];

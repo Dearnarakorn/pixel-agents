@@ -67,6 +67,7 @@ import type {
 } from '../types.js';
 import { CharacterState, TILE_SIZE, TileType } from '../types.js';
 import { getWallInstances, hasWallSprites, wallColorToHex } from '../wallTiles.js';
+import { catSitsOnFloor } from './catBehaviour.js';
 import { getCharacterSprite } from './characters.js';
 import { renderMatrixEffect } from './matrixEffect.js';
 import { getPetSpriteData } from './petEntity.js';
@@ -401,7 +402,7 @@ export function renderScene(
     const sittingOffset =
       ch.state === CharacterState.TYPE
         ? CHARACTER_SITTING_OFFSET_PX
-        : (ch.catSitSec ?? 0) > 0
+        : catSitsOnFloor(ch)
           ? CAT_FLOOR_SIT_OFFSET_PX
           : 0;
     // Anchor at bottom-center of character — round to integer device pixels

@@ -4,13 +4,16 @@ import { test } from 'vitest';
 
 import { CAT_ERRAND_CHANCE } from '../src/constants.js';
 import {
+  catSitDir,
+  catSitsOnFloor,
   catSpots,
   chooseCatErrand,
   clearCatErrand,
   pickCatSpot,
+  setCatBehaviour,
 } from '../src/office/engine/catBehaviour.js';
 import type { Character, PlacedFurniture } from '../src/office/types.js';
-import { Direction } from '../src/office/types.js';
+import { CharacterState, Direction } from '../src/office/types.js';
 
 const footprints: Record<string, { footprintW: number; footprintH: number; canPlaceOnWalls?: boolean }> = {
   POT: { footprintW: 1, footprintH: 1 },
@@ -65,6 +68,19 @@ test('a cat picks a spot near it that no one holds', () => {
   const got = pickCatSpot(ch, spots, taken, () => 0);
   assert.deepEqual(got, spots[2]);
   assert.equal(pickCatSpot(ch, spots, () => true), null);
+});
+
+test('a pausing cat sits facing front or back, never side-on; people do not sit', () => {
+  assert.equal(catSitDir(Direction.LEFT), Direction.DOWN);
+  assert.equal(catSitDir(Direction.RIGHT), Direction.DOWN);
+  assert.equal(catSitDir(Direction.UP), Direction.UP);
+  const idle = { state: CharacterState.IDLE, catSitSec: 0 };
+  setCatBehaviour(false);
+  assert.equal(catSitsOnFloor(idle), false);
+  setCatBehaviour(true);
+  assert.equal(catSitsOnFloor(idle), true);
+  assert.equal(catSitsOnFloor({ state: CharacterState.WALK, catSitSec: 0 }), false);
+  setCatBehaviour(false);
 });
 
 test('clearing an errand opens a napping cat\'s eyes and stops its dash', () => {
