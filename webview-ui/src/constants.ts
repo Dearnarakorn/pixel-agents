@@ -228,6 +228,8 @@ export const NOTIFICATION_MIN_GAIN = 0.0011;
 
 // ── Furniture Animation ─────────────────────────────────────
 export const FURNITURE_ANIM_INTERVAL_SEC = 0.2;
+/** Frames of an ON state a theme adds to a type without one (<TYPE>_ON_1..n). */
+export const THEME_ON_FRAMES = 3;
 
 // ── Version Notice ──────────────────────────────────────────
 export const WHATS_NEW_AUTO_CLOSE_MS = 20000;

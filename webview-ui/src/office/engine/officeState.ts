@@ -17,6 +17,7 @@ import {
   PET_HIT_HALF_WIDTH,
   PET_HIT_HEIGHT,
   SLEEPING_SEAT_TIMER_SEC,
+  THEME_ON_FRAMES,
   WAITING_BUBBLE_DURATION_SEC,
 } from '../../constants.js';
 import { contextUsedShare } from '../contextGauge.js';
@@ -1235,17 +1236,27 @@ export class OfficeState {
 
     // Build modified furniture list with auto-state and animation applied
     const animFrame = Math.floor(this.furnitureAnimTimer / FURNITURE_ANIM_INTERVAL_SEC);
+    // A type with no ON state in the catalog may get one from the theme
+    // (<TYPE>_ON_<n>, e.g. the Cat theme's meeting-table laptop opening on a game).
+    const themeArtOf = new Map<string, string>();
     const modifiedFurniture: PlacedFurniture[] = this.layout.furniture.map((item) => {
       if (!lit.has(item.uid)) return item;
       let onType = getOnStateType(item.type);
-      if (onType === item.type) return item;
+      if (onType === item.type) {
+        const key = `${item.type.split(':')[0]}_ON_${(animFrame % THEME_ON_FRAMES) + 1}`;
+        if (themeVariants(key).length > 0 || themeArt(key)) themeArtOf.set(item.uid, key);
+        return item;
+      }
       // Check if the on-state type has animation frames
       const frames = getAnimationFrames(onType);
       if (frames && frames.length > 1) onType = frames[animFrame % frames.length];
       return { ...item, type: onType };
     });
 
-    this.furniture = [...layoutToFurnitureInstances(modifiedFurniture), ...this.catToyInstances()];
+    this.furniture = [
+      ...layoutToFurnitureInstances(modifiedFurniture, themeArtOf),
+      ...this.catToyInstances(),
+    ];
   }
 
   setAgentTool(id: number, tool: string | null): void {

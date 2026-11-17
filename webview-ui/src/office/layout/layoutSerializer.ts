@@ -24,8 +24,13 @@ export function layoutToTileMap(layout: OfficeLayout): TileTypeVal[][] {
   return map;
 }
 
-/** Convert placed furniture into renderable FurnitureInstance[] */
-export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): FurnitureInstance[] {
+/** Convert placed furniture into renderable FurnitureInstance[].
+ *  `themeArtOf` (uid → theme art key) draws an item with that theme art in place of
+ *  its type's: an ON frame the theme adds to a type that has none in the catalog. */
+export function layoutToFurnitureInstances(
+  furniture: PlacedFurniture[],
+  themeArtOf?: ReadonlyMap<string, string>,
+): FurnitureInstance[] {
   // Pre-compute desk zY per tile so surface items can sort in front of desks
   const deskZByTile = new Map<string, number>();
   for (const item of furniture) {
@@ -76,12 +81,13 @@ export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): Furnit
     }
 
     // The office theme may redraw this type (same size, so nothing else changes)
-    const base = themedSprite(item.type, entry.sprite, item.uid);
+    const artType = themeArtOf?.get(item.uid) ?? item.type;
+    const base = themedSprite(artType, entry.sprite, item.uid);
     let sprite = base;
     // Colorize sprite if this furniture has a color override
     if (item.color) {
       const { h, s, b: bv, c: cv } = item.color;
-      const art = base === entry.sprite ? item.type : `theme-${themeArtKey(item.type, item.uid)}`;
+      const art = base === entry.sprite ? item.type : `theme-${themeArtKey(artType, item.uid)}`;
       sprite = getColorizedSprite(
         `furn-${art}-${h}-${s}-${bv}-${cv}-${item.color.colorize ? 1 : 0}`,
         base,
