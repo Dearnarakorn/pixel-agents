@@ -9,7 +9,7 @@ import type {
 } from '../types.js';
 import { DEFAULT_COLS, DEFAULT_ROWS, Direction, TILE_SIZE, TileType } from '../types.js';
 import { getCatalogEntry, getOrientationInGroup } from './furnitureCatalog.js';
-import { themedSprite } from './themeFurniture.js';
+import { themeArtKey, themedSprite } from './themeFurniture.js';
 
 /** Convert flat tile array from layout into 2D grid */
 export function layoutToTileMap(layout: OfficeLayout): TileTypeVal[][] {
@@ -76,14 +76,14 @@ export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): Furnit
     }
 
     // The office theme may redraw this type (same size, so nothing else changes)
-    const base = themedSprite(item.type, entry.sprite);
+    const base = themedSprite(item.type, entry.sprite, item.uid);
     let sprite = base;
     // Colorize sprite if this furniture has a color override
     if (item.color) {
       const { h, s, b: bv, c: cv } = item.color;
-      const theme = base === entry.sprite ? '' : 'theme-';
+      const art = base === entry.sprite ? item.type : `theme-${themeArtKey(item.type, item.uid)}`;
       sprite = getColorizedSprite(
-        `furn-${theme}${item.type}-${h}-${s}-${bv}-${cv}-${item.color.colorize ? 1 : 0}`,
+        `furn-${art}-${h}-${s}-${bv}-${cv}-${item.color.colorize ? 1 : 0}`,
         base,
         item.color,
       );

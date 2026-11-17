@@ -2,6 +2,8 @@ import { chooseLook } from '../../../../core/src/paletteUtils.js';
 import { isCameraFollowEnabled } from '../../cameraFollow.js';
 import {
   BEDROOM_AREA_LABELS,
+  CAT_TOY_ART_PREFIX,
+  CAT_TOY_TYPE,
   CHARACTER_HIT_HALF_WIDTH,
   CHARACTER_HIT_HEIGHT,
   CHARACTER_SITTING_OFFSET_PX,
@@ -26,7 +28,8 @@ import {
   layoutToSeats,
   layoutToTileMap,
 } from '../layout/layoutSerializer.js';
-import { themeFurnitureVersion } from '../layout/themeFurniture.js';
+import { type CatToy, placeCatToys } from '../layout/catToys.js';
+import { themeArt, themeFurnitureVersion, themeVariants } from '../layout/themeFurniture.js';
 import { findPath, getWalkableTiles, isWalkable } from '../layout/tileMap.js';
 import { pairWorkstations } from '../layout/workstations.js';
 import { getPetCount, getPetName } from '../sprites/petSpriteData.js';
@@ -1153,21 +1156,60 @@ export class OfficeState {
     return lit;
   }
 
-  /** Cat spots, cached per layout (catBehaviour.ts). */
-  private catSpotCache: { furniture: unknown; blocked: unknown; spots: CatSpot[] } | null = null;
+  /** The Cat theme's floor toys, cached per layout and theme art (layout/catToys.ts). */
+  private catToyCache: { furniture: unknown; tiles: unknown; theme: number; toys: CatToy[] } | null =
+    null;
+
+  /** The floor toys lying about (none unless the theme draws toys). */
+  private catToys(): CatToy[] {
+    const { furniture, tiles } = this.layout;
+    const theme = themeFurnitureVersion();
+    const cache = this.catToyCache;
+    if (cache && cache.furniture === furniture && cache.tiles === tiles && cache.theme === theme) {
+      return cache.toys;
+    }
+    const kinds = themeVariants(CAT_TOY_ART_PREFIX.slice(0, -1));
+    const toys = placeCatToys(this.layout, furniture, getCatalogEntry, kinds);
+    this.catToyCache = { furniture, tiles, theme, toys };
+    return toys;
+  }
+
+  /** The toys as furniture to draw: flat on the floor, under anyone walking over them. */
+  private catToyInstances(): FurnitureInstance[] {
+    return this.catToys().flatMap((toy) => {
+      const sprite = themeArt(toy.kind);
+      if (!sprite) return [];
+      const x = toy.col * TILE_SIZE + Math.floor((TILE_SIZE - (sprite[0]?.length ?? 0)) / 2);
+      const y = (toy.row + 1) * TILE_SIZE - sprite.length;
+      return [{ sprite, x, y, zY: toy.row * TILE_SIZE }];
+    });
+  }
+
+  /** Cat spots, cached per layout and toys (catBehaviour.ts). */
+  private catSpotCache: { furniture: unknown; blocked: unknown; toys: unknown; spots: CatSpot[] } | null =
+    null;
 
   /** What idle cats can do this frame: the spots by their things, and which are taken. */
   private catContext(): CatContext {
     const furniture = this.layout.furniture;
+    const toys = this.catToys();
     if (
       !this.catSpotCache ||
       this.catSpotCache.furniture !== furniture ||
-      this.catSpotCache.blocked !== this.blockedTiles
+      this.catSpotCache.blocked !== this.blockedTiles ||
+      this.catSpotCache.toys !== toys
     ) {
-      const spots = catSpots(furniture, getCatalogEntry, (col, row) =>
+      // A toy is a 1x1 thing to sit by, like a pot.
+      const things: PlacedFurniture[] = [
+        ...furniture,
+        ...toys.map((t) => ({ uid: `toy-${t.col}-${t.row}`, type: CAT_TOY_TYPE, col: t.col, row: t.row })),
+      ];
+      const footprint = (type: string) =>
+        type === CAT_TOY_TYPE ? { footprintW: 1, footprintH: 1 } : getCatalogEntry(type);
+      const spots = catSpots(things, footprint, (col, row) =>
         isWalkable(col, row, this.tileMap, this.blockedTiles),
       );
-      this.catSpotCache = { furniture, blocked: this.blockedTiles, spots };
+      this.catSpotCache = { furniture, blocked: this.blockedTiles, toys, spots };
     }
     const taken = new Set<string>();
     for (const other of this.characters.values()) {
@@ -1184,7 +1226,10 @@ export class OfficeState {
   private rebuildFurnitureInstances(lit = this.litWorkstations()): void {
     this.litPcs = lit;
     if (lit.size === 0) {
-      this.furniture = layoutToFurnitureInstances(this.layout.furniture);
+      this.furniture = [
+        ...layoutToFurnitureInstances(this.layout.furniture),
+        ...this.catToyInstances(),
+      ];
       return;
     }
 
@@ -1200,7 +1245,7 @@ export class OfficeState {
       return { ...item, type: onType };
     });
 
-    this.furniture = layoutToFurnitureInstances(modifiedFurniture);
+    this.furniture = [...layoutToFurnitureInstances(modifiedFurniture), ...this.catToyInstances()];
   }
 
   setAgentTool(id: number, tool: string | null): void {

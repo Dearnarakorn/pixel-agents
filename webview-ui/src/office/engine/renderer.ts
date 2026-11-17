@@ -67,7 +67,7 @@ import type {
 } from '../types.js';
 import { CharacterState, TILE_SIZE, TileType } from '../types.js';
 import { getWallInstances, hasWallSprites, wallColorToHex } from '../wallTiles.js';
-import { catSitsOnFloor } from './catBehaviour.js';
+import { catSideSitZ, catSitsOnFloor } from './catBehaviour.js';
 import { getCharacterSprite } from './characters.js';
 import { renderMatrixEffect } from './matrixEffect.js';
 import { getPetSpriteData } from './petEntity.js';
@@ -412,7 +412,14 @@ export function renderScene(
     // Sort characters by bottom of their tile (not center) so they render
     // in front of same-row furniture (e.g. chairs) but behind furniture
     // at lower rows (e.g. desks, bookshelves that occlude from below).
-    const charZY = ch.y + TILE_SIZE / 2 + CHARACTER_Z_SORT_OFFSET;
+    // A cat seated side-on reaches over the table it faces: it sorts in front of it.
+    const charZY = catSideSitZ(
+      ch,
+      ch.y + TILE_SIZE / 2 + CHARACTER_Z_SORT_OFFSET,
+      ch.y + sittingOffset - spriteData.length,
+      ch.y + sittingOffset,
+      furniture,
+    );
 
     // Headless agents (adopted, no terminal to focus) render translucent while
     // the "Display headless as ghosts" setting is on.

@@ -4,6 +4,7 @@ import { test } from 'vitest';
 
 import { CAT_ERRAND_CHANCE } from '../src/constants.js';
 import {
+  catSideSitZ,
   catSitDir,
   catSitsOnFloor,
   catSpots,
@@ -81,6 +82,19 @@ test('a pausing cat sits facing front or back, never side-on; people do not sit'
   assert.equal(catSitsOnFloor(idle), true);
   assert.equal(catSitsOnFloor({ state: CharacterState.WALK, catSitSec: 0 }), false);
   setCatBehaviour(false);
+});
+
+test('a side-seated cat sorts in front of the table it reaches over, nothing else does', () => {
+  // cat seated at x 24 (tile 1), facing right; a 2-tile-wide table from x 32, rows 1-3, z 64
+  const table = { x: 32, y: 16, zY: 64, sprite: Array.from({ length: 48 }, () => Array(32).fill('')) };
+  const lamp = { x: 64, y: 0, zY: 64, sprite: [Array(16).fill('')] }; // out of reach
+  const typing = { state: CharacterState.TYPE, dir: Direction.RIGHT, x: 24 };
+  setCatBehaviour(true);
+  assert.equal(catSideSitZ(typing, 32.5, 6, 38, [table, lamp]), 64.25);
+  assert.equal(catSideSitZ({ ...typing, dir: Direction.LEFT }, 32.5, 6, 38, [table]), 32.5);
+  assert.equal(catSideSitZ({ ...typing, dir: Direction.DOWN }, 32.5, 6, 38, [table]), 32.5);
+  setCatBehaviour(false);
+  assert.equal(catSideSitZ(typing, 32.5, 6, 38, [table]), 32.5);
 });
 
 test('clearing an errand opens a napping cat\'s eyes and stops its dash', () => {

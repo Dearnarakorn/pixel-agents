@@ -11,10 +11,11 @@
 import {
   CAT_ERRAND_CHANCE,
   CAT_INTEREST_TYPES,
+  CAT_SIDE_SIT_Z_LIFT,
   CAT_SPOT_NEAREST,
 } from '../../constants.js';
 import type { Character, PlacedFurniture } from '../types.js';
-import { CharacterState, Direction } from '../types.js';
+import { CharacterState, Direction, TILE_SIZE } from '../types.js';
 
 let catBehaviour = false;
 
@@ -36,6 +37,46 @@ export function catSitDir(dir: Direction): Direction {
 /** Whether a character is drawn sitting on the floor (Cat theme, not walking, not in a seat). */
 export function catSitsOnFloor(ch: Pick<Character, 'state' | 'catSitSec'>): boolean {
   return ch.state === CharacterState.IDLE && ((ch.catSitSec ?? 0) > 0 || catBehaviour);
+}
+
+/** The thing a sideways-seated cat's sprite overlaps: furniture as drawn (world pixels). */
+interface CatOverlapItem {
+  x: number;
+  y: number;
+  zY: number;
+  sprite: readonly (readonly string[])[];
+}
+
+/**
+ * Depth for a cat seated side-on (Cat theme, TYPE, facing left or right). A
+ * cat's frame is twice a tile wide, so its head and front paws reach half a
+ * tile past its seat over the table it faces -- which, ending on a lower row,
+ * sorts in front and cuts the cat off. Here the cat sorts in front of anything
+ * in that reach (beside its own tile, overlapping its frame) that would
+ * otherwise cover it. Everyone else keeps `z`.
+ */
+export function catSideSitZ(
+  ch: Pick<Character, 'state' | 'dir' | 'x'>,
+  z: number,
+  top: number,
+  bottom: number,
+  furniture: readonly CatOverlapItem[],
+): number {
+  if (!catBehaviour || ch.state !== CharacterState.TYPE) return z;
+  if (ch.dir !== Direction.LEFT && ch.dir !== Direction.RIGHT) return z;
+  const half = TILE_SIZE / 2;
+  const reachL = ch.dir === Direction.RIGHT ? ch.x + half : ch.x - TILE_SIZE;
+  const reachR = reachL + half;
+  let out = z;
+  for (const f of furniture) {
+    if (f.zY <= out) continue;
+    const w = f.sprite[0]?.length ?? 0;
+    const h = f.sprite.length;
+    if (f.x < reachR && f.x + w > reachL && f.y < bottom && f.y + h > top) {
+      out = f.zY + CAT_SIDE_SIT_Z_LIFT;
+    }
+  }
+  return out;
 }
 
 export interface CatSpot {

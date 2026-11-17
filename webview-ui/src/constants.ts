@@ -277,6 +277,8 @@ export const CAT_ZOOM_SPEED_MUL = 2.6;
 export const CAT_SPOT_NEAREST = 6;
 /** A cat sitting on the floor is drawn this much lower: its sitting frames are lifted for chairs. */
 export const CAT_FLOOR_SIT_OFFSET_PX = 3;
+/** A side-seated cat sorts this far in front of the table its head reaches over. */
+export const CAT_SIDE_SIT_Z_LIFT = 0.25;
 /** Furniture a cat goes to and sits by (its toys, posts, trees, bowls, the window).
  *  Not the meeting tables' laptops (PC_SIDE): their spots are beside other cats' cushions. */
 export const CAT_INTEREST_TYPES: readonly string[] = [
@@ -290,7 +292,24 @@ export const CAT_INTEREST_TYPES: readonly string[] = [
   'PA_FLOOR_LAMP',
   'PA_NIGHTSTAND_LAMP',
   'PA_WARDROBE',
+  'CAT_TOY',
 ];
+/** Cat theme floor toys (layout/catToys.ts): the type a toy goes by (cat spots), the
+ *  lounge furniture that gets one toy near it, how far from it (tiles), and how
+ *  far apart two toys stay (tiles, in both directions). */
+export const CAT_TOY_TYPE = 'CAT_TOY';
+export const CAT_TOY_ANCHOR_TYPES: readonly string[] = [
+  'SOFA_FRONT',
+  'SOFA_BACK',
+  'SOFA_SIDE',
+  'COFFEE_TABLE',
+  'PLANT_2',
+  'LARGE_PLANT',
+];
+export const CAT_TOY_REACH = 2;
+export const CAT_TOY_SPACING = 2;
+/** The theme art keys of the floor toys start with this (themes/cat/TOY.yarn.png). */
+export const CAT_TOY_ART_PREFIX = 'TOY.';
 /** How often the tab title and desktop notifications re-read the office. */
 export const ATTENTION_CHECK_MS = 1000;
 /** Layout Area labels (lower-cased) that make an Area a bedroom: sleeping
