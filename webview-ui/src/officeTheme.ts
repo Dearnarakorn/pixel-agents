@@ -13,6 +13,7 @@ import { rgbaToHex } from '../../core/src/assets/colorUtils.js';
 import { setCatMode } from './characters/cats.js';
 import { decodePng } from './characters/loadWardrobe.js';
 import { setCatBehaviour } from './office/engine/catBehaviour.js';
+import { setThemeFloors } from './office/floorTiles.js';
 import { setThemeFurniture } from './office/layout/themeFurniture.js';
 import type { SpriteData } from './office/types.js';
 
@@ -63,9 +64,20 @@ export function applyOfficeTheme(next: OfficeTheme): void {
   setCatBehaviour(cat);
   if (cat) {
     void loadCatFurniture().then((sprites) => {
-      if (theme === 'cat') setThemeFurniture(sprites);
+      if (theme !== 'cat') return;
+      // FLOOR_<n> art is a floor pattern, the rest furniture
+      const floors = new Map<number, SpriteData>();
+      const furniture = new Map<string, SpriteData>();
+      for (const [key, sprite] of sprites) {
+        const floor = /^FLOOR_(\d+)$/.exec(key);
+        if (floor) floors.set(Number(floor[1]), sprite);
+        else furniture.set(key, sprite);
+      }
+      setThemeFloors(floors);
+      setThemeFurniture(furniture);
     });
   } else {
+    setThemeFloors(null);
     setThemeFurniture(null);
   }
   for (const listener of listeners) listener();

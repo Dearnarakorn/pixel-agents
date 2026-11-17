@@ -29,9 +29,21 @@ export function setFloorSprites(sprites: SpriteData[]): void {
   clearColorizeCache();
 }
 
+/** The office theme's floor patterns by pattern index (themes/cat/FLOOR_<n>.png), or null. */
+let themeFloors: ReadonlyMap<number, SpriteData> | null = null;
+let themeFloorVersion = 0;
+
+/** Set the theme's floor patterns (grayscale, 16x16; colorized like the usual ones), or null. */
+export function setThemeFloors(next: ReadonlyMap<number, SpriteData> | null): void {
+  themeFloors = next;
+  themeFloorVersion++;
+}
+
 /** Get the raw (grayscale) floor sprite for a pattern index (1-7 -> array index 0-6).
  *  Falls back to the default solid gray tile when floors.png is not loaded. */
 function getFloorSprite(patternIndex: number): SpriteData | null {
+  const themed = themeFloors?.get(patternIndex);
+  if (themed && themed.length === TILE_SIZE && themed[0]?.length === TILE_SIZE) return themed;
   const idx = patternIndex - 1;
   if (idx < 0) return null;
   if (idx < floorSprites.length) return floorSprites[idx];
@@ -61,7 +73,8 @@ export function getFloorPatternCount(): number {
  * then brightness/contrast adjustment.
  */
 export function getColorizedFloorSprite(patternIndex: number, color: ColorValue): SpriteData {
-  const key = `floor-${patternIndex}-${color.h}-${color.s}-${color.b}-${color.c}`;
+  const theme = themeFloors?.has(patternIndex) ? `t${themeFloorVersion}-` : '';
+  const key = `floor-${theme}${patternIndex}-${color.h}-${color.s}-${color.b}-${color.c}`;
 
   const base = getFloorSprite(patternIndex);
   if (!base) {
