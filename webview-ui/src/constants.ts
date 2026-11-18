@@ -273,8 +273,12 @@ export const CAT_SPOT_SIT_SEC: readonly [number, number] = [8, 20];
 export const CAT_NAP_SEC: readonly [number, number] = [12, 28];
 /** Seconds of sitting in place, tail swishing. */
 export const CAT_SIT_SEC: readonly [number, number] = [4, 9];
-/** Zoomies: walk speed multiplier for the dash. */
+/** Zoomies: walk speed multiplier for the dash (on top of CAT_WALK_SPEED_MUL). */
 export const CAT_ZOOM_SPEED_MUL = 2.6;
+/** A cat strolls slower than a person walks (and steps slower to match). */
+export const CAT_WALK_SPEED_MUL = 0.55;
+/** Seconds per breath frame of a sleeping cat (a nap, or curled up in bed). */
+export const CAT_SLEEP_BREATH_SEC = 1.2;
 /** A spot is picked among this many nearest to the cat (so it goes to things in its room). */
 export const CAT_SPOT_NEAREST = 6;
 /** A cat sitting on the floor is drawn this much lower: its sitting frames are lifted for chairs. */

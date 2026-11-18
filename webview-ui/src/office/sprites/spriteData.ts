@@ -105,7 +105,12 @@ export interface CharacterSprites {
   reading: Record<Direction, [SpriteData, SpriteData]>;
   /** In the chair with nothing to do. */
   seated: Record<Direction, SpriteData>;
+  /** Curled up asleep, breathing (only sheets drawn with the two extra frames: the cats). */
+  sleeping?: Record<Direction, [SpriteData, SpriteData]>;
 }
+
+/** Where a sheet row's sleep frames are, when it has them (after the seated frame). */
+export const SLEEP_FRAMES = [SEATED_FRAME + 1, SEATED_FRAME + 2] as const;
 
 const spriteCache = new Map<string, CharacterSprites>();
 
@@ -181,6 +186,14 @@ export function getCharacterSprites(
         [Dir.LEFT]: flip(rt[SEATED_FRAME]),
       },
     };
+    if (d.length > SLEEP_FRAMES[1] && u.length > SLEEP_FRAMES[1] && rt.length > SLEEP_FRAMES[1]) {
+      sprites.sleeping = {
+        [Dir.DOWN]: at(d, SLEEP_FRAMES),
+        [Dir.UP]: at(u, SLEEP_FRAMES),
+        [Dir.RIGHT]: at(rt, SLEEP_FRAMES),
+        [Dir.LEFT]: flipped(SLEEP_FRAMES),
+      };
+    }
   } else {
     // Fallback: return transparent placeholder sprites (16×32)
     const e = emptySprite(16, 32);

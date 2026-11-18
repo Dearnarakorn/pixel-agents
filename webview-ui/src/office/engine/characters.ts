@@ -1,5 +1,7 @@
 import {
   CAT_NAP_SEC,
+  CAT_SLEEP_BREATH_SEC,
+  CAT_WALK_SPEED_MUL,
   CAT_SIT_SEC,
   CAT_SPOT_SIT_SEC,
   CAT_ZOOM_SPEED_MUL,
@@ -131,8 +133,10 @@ export function updateCharacter(
 
   switch (ch.state) {
     case CharacterState.TYPE: {
-      if (ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
-        ch.frameTimer -= TYPE_FRAME_DURATION_SEC;
+      // Asleep in bed: slow breaths (a cat's curled-up frames), else typing's pace.
+      const frameSec = ch.inBed && !ch.isActive ? CAT_SLEEP_BREATH_SEC : TYPE_FRAME_DURATION_SEC;
+      if (ch.frameTimer >= frameSec) {
+        ch.frameTimer -= frameSec;
         ch.frame = (ch.frame + 1) % 2;
       }
       // If no longer active, stand up and start wandering (after seatTimer expires)
@@ -156,8 +160,10 @@ export function updateCharacter(
       // A cat sitting on the floor (by a toy, napping, or just sitting): tail swishes, then on.
       if (cat && !ch.isActive && (ch.catSitSec ?? 0) > 0) {
         ch.catSitSec = (ch.catSitSec ?? 0) - dt;
-        if (!ch.catNap && ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
-          ch.frameTimer -= TYPE_FRAME_DURATION_SEC;
+        // tail swishes while sitting; slow breaths while napping
+        const frameSec = ch.catNap ? CAT_SLEEP_BREATH_SEC : TYPE_FRAME_DURATION_SEC;
+        if (ch.frameTimer >= frameSec) {
+          ch.frameTimer -= frameSec;
           ch.frame = (ch.frame + 1) % 2;
         }
         if (ch.catSitSec <= 0) {
@@ -268,8 +274,9 @@ export function updateCharacter(
     }
 
     case CharacterState.WALK: {
-      // Walk animation (quicker steps on a dash)
-      const frameSec = WALK_FRAME_DURATION_SEC / (ch.speedMul ?? 1);
+      // Walk animation (quicker steps on a dash, slower for a strolling cat)
+      const pace = (ch.speedMul ?? 1) * (cat ? CAT_WALK_SPEED_MUL : 1);
+      const frameSec = WALK_FRAME_DURATION_SEC / pace;
       if (ch.frameTimer >= frameSec) {
         ch.frameTimer -= frameSec;
         ch.frame = (ch.frame + 1) % 4;
@@ -341,7 +348,7 @@ export function updateCharacter(
         break;
       }
 
-      stepAlongPath(ch, dt);
+      stepAlongPath(ch, dt, pace);
 
       // If became active while wandering, repath to seat
       if (ch.isActive && ch.seatId) {
@@ -370,11 +377,11 @@ export function updateCharacter(
 }
 
 /** Move along `ch.path` for one frame; on reaching a tile, make it the character's tile. */
-function stepAlongPath(ch: Character, dt: number): void {
+function stepAlongPath(ch: Character, dt: number, pace = ch.speedMul ?? 1): void {
   const nextTile = ch.path[0];
   ch.dir = directionBetween(ch.tileCol, ch.tileRow, nextTile.col, nextTile.row);
 
-  ch.moveProgress += ((WALK_SPEED_PX_PER_SEC * (ch.speedMul ?? 1)) / TILE_SIZE) * dt;
+  ch.moveProgress += ((WALK_SPEED_PX_PER_SEC * pace) / TILE_SIZE) * dt;
 
   const fromCenter = tileCenter(ch.tileCol, ch.tileRow);
   const toCenter = tileCenter(nextTile.col, nextTile.row);
@@ -495,7 +502,11 @@ export function getCharacterSprite(ch: Character, sprites: CharacterSprites): Sp
     case CharacterState.TYPE:
       // Resting in its chair (a turn over, or back from wandering). Helpers have no
       // chair: they stand once idle, and keep typing through the gaps between tools.
-      if (!ch.isActive && !ch.isSubagent) return sprites.seated[ch.dir];
+      if (!ch.isActive && !ch.isSubagent) {
+        // A cat asleep in bed curls up (people's sheets have no sleeping frames).
+        if (ch.inBed && sprites.sleeping) return sprites.sleeping[ch.dir][ch.frame % 2];
+        return sprites.seated[ch.dir];
+      }
       if (isReadingTool(ch.currentTool)) {
         return sprites.reading[ch.dir][ch.frame % 2];
       }
@@ -505,7 +516,8 @@ export function getCharacterSprite(ch: Character, sprites: CharacterSprites): Sp
     case CharacterState.IDLE:
       // A cat sitting on the floor: tail swishing, or still with its eyes shut (a nap)
       if ((ch.catSitSec ?? 0) > 0) {
-        return ch.catNap ? sprites.seated[ch.dir] : sprites.typing[ch.dir][ch.frame % 2];
+        if (!ch.catNap) return sprites.typing[ch.dir][ch.frame % 2];
+        return sprites.sleeping ? sprites.sleeping[ch.dir][ch.frame % 2] : sprites.seated[ch.dir];
       }
       // Any other pause in the Cat theme: sit facing front or back (never a frozen side step)
       if (isCatBehaviour()) return sprites.typing[catSitDir(ch.dir)][ch.frame % 2];

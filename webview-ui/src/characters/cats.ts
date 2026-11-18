@@ -2,8 +2,8 @@
  * The Cat theme's agents: every agent in the office drawn as a real
  * four-legged cat. Each coat is a finished sheet (cats/<coat>.png, eyes open,
  * and cats/<coat>.blink.png, eyes shut) recoloured from the pet cat:
- * 3 direction rows (down, up, right) x 8 frames (walk1-3, type1-2, read1-2,
- * seated) like a person's sheet, but every frame 32x32, since a cat seen
+ * 3 direction rows (down, up, right) x 10 frames (walk1-3, type1-2, read1-2,
+ * seated like a person's sheet, then sleep1-2), every frame 32x32, since a cat seen
  * side-on is long (the office centres a sprite on its own width). Only the
  * office and its mug shots change: the Characters view still edits the
  * people, and the Office theme brings them back.
@@ -23,7 +23,8 @@ const pngs = import.meta.glob<string>('./cats/*.png', {
 });
 
 const DIRECTIONS = ['down', 'up', 'right'] as const;
-const FRAMES_PER_ROW = 8;
+/** A person's 8 frames, then sleep1-2 (curled up, breathing). */
+const FRAMES_PER_ROW = 10;
 
 /** A cat sheet's pixels as office sprites (32x32 frames), or null when it is the wrong size. */
 function sheetToCatSprites(img: {
