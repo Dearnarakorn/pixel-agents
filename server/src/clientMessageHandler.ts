@@ -13,6 +13,7 @@ import {
   refusedSaveAnswer,
 } from './characterProfilesPersistence.js';
 import {
+  DEFAULT_OFFICE_THEME,
   getHooksConsent,
   getHooksEnabled,
   isOfficeTheme,
@@ -114,8 +115,8 @@ const KEY_SHOW_HOST_DIRECTORIES = 'pixel-agents.showHostDirectories';
 const KEY_OFFICE_THEME = 'pixel-agents.officeTheme';
 
 function officeThemeOf(adapter: StateAdapter | undefined): OfficeTheme {
-  const theme = adapter?.getSetting<unknown>(KEY_OFFICE_THEME, 'office');
-  return isOfficeTheme(theme) ? theme : 'office';
+  const theme = adapter?.getSetting<unknown>(KEY_OFFICE_THEME, DEFAULT_OFFICE_THEME);
+  return isOfficeTheme(theme) ? theme : DEFAULT_OFFICE_THEME;
 }
 
 /** The provider whose conversations the sidebar lists and resumes: the first

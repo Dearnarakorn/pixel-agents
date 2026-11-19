@@ -1,14 +1,14 @@
 {
-  "name": "pixel-agents",
-  "displayName": "Pixel Agents",
-  "description": "Pixel art office where your Claude Code agents come to life as animated characters",
-  "version": "1.6.0-office.43",
+  "name": "pixel-cat-agents",
+  "displayName": "Pixel Cat Agents",
+  "description": "A pixel art cat office where your Claude Code agents live as cats (a fork of Pixel Agents)",
+  "version": "0.1.0",
   "publisher": "pablodelucca",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pixel-agents-hq/pixel-agents"
+    "url": "https://github.com/Dearnarakorn/pixel-agents"
   },
-  "homepage": "https://pixel-agents.com",
+  "homepage": "https://github.com/Dearnarakorn/pixel-agents",
   "workspaces": [
     "server",
     "webview-ui"
@@ -30,7 +30,7 @@
   ],
   "main": "./dist/extension.js",
   "bin": {
-    "pixel-agents": "./dist/cli.js"
+    "pixel-cat-agents": "./dist/cli.js"
   },
   "files": [
     "CHANGELOG.md",

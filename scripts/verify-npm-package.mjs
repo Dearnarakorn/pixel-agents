@@ -125,12 +125,12 @@ async function verifyInstalledTarball(tarballPath) {
       cwd: smokeProject,
     });
 
-    const installedRoot = path.join(smokeProject, 'node_modules', 'pixel-agents');
+    const installedRoot = path.join(smokeProject, 'node_modules', 'pixel-cat-agents');
     const installedManifest = JSON.parse(
       fs.readFileSync(path.join(installedRoot, 'package.json'), 'utf-8'),
     );
-    if (installedManifest.bin?.['pixel-agents'] !== './dist/cli.js') {
-      throw new Error('Installed package has an unexpected pixel-agents bin entry');
+    if (installedManifest.bin?.['pixel-cat-agents'] !== './dist/cli.js') {
+      throw new Error('Installed package has an unexpected pixel-cat-agents bin entry');
     }
 
     const installedCli = path.join(installedRoot, 'dist', 'cli.js');
@@ -143,7 +143,7 @@ async function verifyInstalledTarball(tarballPath) {
       smokeProject,
       'node_modules',
       '.bin',
-      process.platform === 'win32' ? 'pixel-agents.cmd' : 'pixel-agents',
+      process.platform === 'win32' ? 'pixel-cat-agents.cmd' : 'pixel-cat-agents',
     );
     const help = await execFileAsync(installedBin, ['--help'], {
       cwd: smokeProject,

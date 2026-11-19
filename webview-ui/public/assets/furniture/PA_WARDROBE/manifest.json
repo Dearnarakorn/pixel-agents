@@ -1,0 +1,14 @@
+{
+  "id": "PA_WARDROBE",
+  "name": "Wardrobe",
+  "category": "storage",
+  "type": "asset",
+  "file": "PA_WARDROBE.png",
+  "width": 32,
+  "height": 32,
+  "footprintW": 2,
+  "footprintH": 2,
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 1
+}

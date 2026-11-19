@@ -15,6 +15,8 @@ docstring says what it draws and how to call it.
 | `make_cat_floors.py` | floor patterns (`FLOOR_<n>.png`) | theme dir given |
 | `make_cat_carpet.py` | paw-print carpet inside (`CARPET_0_15.png`) | theme dir given |
 | `sim_cat_toys.py` | where the toys land on the current layout (check only) | prints |
+| `make_bed_asset.py` | the bedroom furniture (beds, bed covers, nightstands, lamps, wardrobe) in the office's plain look | `~/.pixel-agents/custom-assets/`; copy into `webview-ui/public/assets/furniture/` to bundle |
+| `make_default_layout.py` | the bundled default office from your own `~/.pixel-agents/layout.json`, keeping only the Bedroom and Cafe Areas (revision 1, so existing layouts are never reset) | file given (`webview-ui/public/assets/default-layout-1.json`) |
 
 Scripts that read the layout or the custom bed assets use `~/.pixel-agents/`.
 

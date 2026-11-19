@@ -1,0 +1,14 @@
+{
+  "id": "PA_BED_ROSE",
+  "name": "Bed (rose)",
+  "category": "chairs",
+  "type": "asset",
+  "file": "PA_BED_ROSE.png",
+  "width": 16,
+  "height": 32,
+  "footprintW": 1,
+  "footprintH": 2,
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 1
+}

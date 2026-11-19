@@ -1,3 +1,36 @@
+# Pixel Cat Agents
+
+A fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by Pablo De Lucca where every Claude Code agent is a cat, living in a cat office.
+
+- **Agents are cats.** 8 coats, built from the pixel art of Pixel Agents' own pet cat. They walk on four legs, tap the keys with a paw while working, hold a sheet of paper while reading, and curl up to sleep.
+- **A cat office.** It has cat furniture, cat houses, a climbing wall, toys on the floor, paw-print carpets, and laptops that play little games while their cat works.
+- **Cats behave like cats when idle.** They go and sit by things, nap on the floor, sit and swish their tails, and get the zoomies.
+- **A bedroom.** An agent idle for a while shows "Zzz" and walks to a bed to sleep. It wakes when it starts working again.
+- **A ready-made office.** New users get a work room, a lounge, a cafe and a bedroom. You can change any of it in the layout editor, and Settings switches back to the plain office theme.
+
+### Install
+
+You need [Node.js](https://nodejs.org) 22 or newer. Download `pixel-cat-agents-<version>.tgz` from the [latest release](https://github.com/Dearnarakorn/pixel-agents/releases/latest), then run:
+
+```bash
+npm install --global pixel-cat-agents-0.1.0.tgz
+pixel-cat-agents
+```
+
+Open the URL it prints (it includes a token, so keep it private). Everything else works as in Pixel Agents and is described below. The commands there are spelled `npx pixel-agents`; this fork's command is `pixel-cat-agents`.
+
+Things to know before you install:
+
+- **Settings are shared with Pixel Agents.** This fork keeps its settings and office in `~/.pixel-agents/`, the same place Pixel Agents uses. If you already use Pixel Agents, you keep your own office layout.
+- **Fewer hook events.** With your consent, the office installs Claude Code hooks for five events only: `SessionStart`, `SessionEnd`, `Stop`, `PermissionRequest` and `Notification`. Tool activity is read from the session transcripts.
+- **Art scripts.** The cat art is drawn by Python scripts in [`scripts/cat-art/`](scripts/cat-art/).
+
+### Credits
+
+Pixel Cat Agents is built on [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by Pablo De Lucca, MIT License. The character art credit below still applies. The changes in this fork are under the same [MIT License](LICENSE).
+
+---
+
 <h1 align="center">
   <a href="https://github.com/pixel-agents-hq/pixel-agents/discussions">
     <img src="webview-ui/public/banner.png" alt="Pixel Agents" width="728">

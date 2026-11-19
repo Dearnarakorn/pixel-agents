@@ -1,0 +1,14 @@
+{
+  "id": "PA_NIGHTSTAND",
+  "name": "Bedside table",
+  "category": "decor",
+  "type": "asset",
+  "file": "PA_NIGHTSTAND.png",
+  "width": 16,
+  "height": 16,
+  "footprintW": 1,
+  "footprintH": 1,
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 0
+}

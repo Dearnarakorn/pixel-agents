@@ -29,6 +29,8 @@ export interface AdapterSettings {
 
 export const OFFICE_THEMES = ['office', 'cat'] as const;
 export type OfficeTheme = (typeof OFFICE_THEMES)[number];
+/** Pixel Cat Agents opens as the cat office until a user picks otherwise. */
+export const DEFAULT_OFFICE_THEME: OfficeTheme = 'cat';
 
 export function isOfficeTheme(value: unknown): value is OfficeTheme {
   return typeof value === 'string' && (OFFICE_THEMES as readonly string[]).includes(value);
@@ -107,7 +109,7 @@ const DEFAULT_ADAPTER_SETTINGS: AdapterSettings = {
   areaMappings: {},
   bypassPermissions: false,
   showHostDirectories: false,
-  officeTheme: 'office',
+  officeTheme: DEFAULT_OFFICE_THEME,
 };
 
 function getConfigFilePath(): string {

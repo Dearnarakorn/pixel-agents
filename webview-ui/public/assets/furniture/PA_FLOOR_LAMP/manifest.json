@@ -1,0 +1,14 @@
+{
+  "id": "PA_FLOOR_LAMP",
+  "name": "Floor lamp",
+  "category": "decor",
+  "type": "asset",
+  "file": "PA_FLOOR_LAMP.png",
+  "width": 16,
+  "height": 32,
+  "footprintW": 1,
+  "footprintH": 2,
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 1
+}
