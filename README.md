@@ -2,11 +2,19 @@
 
 A fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by Pablo De Lucca where every Claude Code agent is a cat, living in a cat office.
 
+![The ready-made cat office with seven agents at work](docs/cat/hero.png)
+
 - **Agents are cats.** 8 coats, built from the pixel art of Pixel Agents' own pet cat. They walk on four legs, tap the keys with a paw while working, hold a sheet of paper while reading, and curl up to sleep.
 - **A cat office.** It has cat furniture, cat houses, a climbing wall, toys on the floor, paw-print carpets, and laptops that play little games while their cat works.
 - **Cats behave like cats when idle.** They go and sit by things, nap on the floor, sit and swish their tails, and get the zoomies.
 - **A bedroom.** An agent idle for a while shows "Zzz" and walks to a bed to sleep. It wakes when it starts working again.
 - **A ready-made office.** New users get a work room, a lounge, a cafe and a bedroom. You can change any of it in the layout editor, and Settings switches back to the plain office theme.
+
+![The 8 coats walking, typing, reading and sleeping](docs/cat/coats.png)
+
+| At work | Asleep in the bedroom |
+| --- | --- |
+| ![Two cats at a desk, one laptop playing a game](docs/cat/work.png) | ![Three cats asleep in their beds](docs/cat/sleep.png) |
 
 ### Install
 
