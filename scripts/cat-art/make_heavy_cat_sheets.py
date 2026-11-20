@@ -112,6 +112,59 @@ def transfer(c, part, view, which):
         c.g[y][x] = ch
 
 
+# Coats whose slim pattern reads as stripes. The slim cats share one pattern; on these it
+# is stripes, which stretching turned into mottling, so their heavy bodies get neat
+# stripes drawn along the body's curve instead (the patched coats keep the copied pattern).
+STRIPED = {"ginger", "tabby", "grey", "blue"}
+STYLE = {"stripes": False}
+
+
+def body_markings(c, part, view):
+    """The heavy body's markings: the slim cat's pattern copied over (transfer), the front's
+    dark kept to a thin band at the sides, and on striped coats neat drawn stripes."""
+    transfer(c, part, view, "body")
+    pts = [(x, y) for (x, y) in part if (x, y) in c.sil and c.g[y][x] in "bc"]
+    rows, cols = {}, {}
+    for x, y in pts:
+        lo, hi = rows.get(y, (x, x))
+        rows[y] = (min(lo, x), max(hi, x))
+        lo, hi = cols.get(x, (y, y))
+        cols[x] = (min(lo, y), max(hi, y))
+    if view == "front":
+        # the slim cat's front is dark only at its very edges; stretched over the heavy body
+        # it became a dark vest, so dark stays within 2 px of the sides
+        for x, y in pts:
+            lo, hi = rows[y]
+            if c.g[y][x] == "c" and x - lo > 2 and hi - x > 2:
+                c.g[y][x] = "b"
+    if not STYLE["stripes"]:
+        return
+    for x, y in pts:
+        c.g[y][x] = "b"
+    paint = set()
+    if view in ("walk", "sit"):
+        # a dark band along the back and stripes down from it every 3 px, following the
+        # curve of the back
+        x0 = min(cols)
+        for x, (top, _) in cols.items():
+            paint |= {(x, top + 1), (x, top + 2)}
+            if (x - x0) % 3 == 1:
+                paint |= {(x, top + k) for k in range(3, 6)}
+    elif view == "front":
+        # short bars at the sides, every other row
+        for y, (lo, hi) in rows.items():
+            if y % 2 == 0 and y > min(rows) + 1:
+                paint |= {(lo + 1, y), (lo + 2, y), (hi - 1, y), (hi - 2, y)}
+    else:
+        # down the back: stripes from the shoulders, the middle ones longer
+        mid = (min(cols) + max(cols)) / 2
+        for x, (top, _) in cols.items():
+            if x % 2 == 0 and abs(x - mid) <= 7:
+                paint |= {(x, top + k) for k in range(1, 6 if abs(x - mid) <= 3 else 4)}
+    for x, y in paint & set(pts):
+        c.g[y][x] = "c"
+
+
 def ell(cx, cy, rx, ry):
     return {(x, y) for y in range(H) for x in range(W) if ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1.0}
 
@@ -227,7 +280,7 @@ def front_sit(tail=0, paper=None):
     c.fill(body)
     c.fill(FRONT_TAILS[tail] | {(x + 1, y) for x, y in FRONT_TAILS[tail] if y >= 26}, "c")
     head = front_face(c)
-    transfer(c, body - head, "front", "body")
+    body_markings(c, body - head, "front")
     transfer(c, head, "front", "head")
     c.outline()
     c.seam(head, body, 16)
@@ -252,7 +305,7 @@ def front_walk(f):
     body = ell(16, 22.6 + bob, 10.4, 5.4) | ell(16, 19.8 + bob, 8.4, 5)
     c.fill(body)
     head = front_face(c, bob - 2)
-    transfer(c, body - head, "front", "body")
+    body_markings(c, body - head, "front")
     transfer(c, head, "front", "head")
     c.outline()
     c.seam(head, body, 14 + bob)
@@ -280,7 +333,7 @@ def back_sit(tail=0):
     body = ell(16, 24.4, 11, 6.0) | ell(16, 21, 8.4, 5)
     c.fill(body)
     head = back_head(c)
-    transfer(c, body - head, "back", "body")
+    body_markings(c, body - head, "back")
     transfer(c, head, "back", "head")
     c.outline()
     c.seam(head, body, 16)
@@ -297,7 +350,7 @@ def back_walk(f):
     body = ell(16, 22.6 + bob, 10.4, 5.4) | ell(16, 19.8 + bob, 8.4, 5)
     c.fill(body)
     head = back_head(c, bob - 2)
-    transfer(c, body - head, "back", "body")
+    body_markings(c, body - head, "back")
     transfer(c, head, "back", "head")
     c.outline()
     c.seam(head, body, 14 + bob)
@@ -341,7 +394,7 @@ def side_sit(paw=False, out=False, paper=None):
     body = ell(13.5, 23.9, 9.2, 6.4) | ell(18.5, 21.4, 5.4, 6.2)
     c.fill(body)
     head = side_head(c)
-    transfer(c, body - head, "sit", "body")
+    body_markings(c, body - head, "sit")
     transfer(c, head, "sit", "head")
     c.outline()
     c.seam(head, body, 17)
@@ -367,7 +420,7 @@ def side_walk(f):
     body = ell(13.5, 21.1 + dy, 10.2, 4.5) | ell(18, 19.5 + dy, 5.5, 4.8)
     c.fill(body)
     head = side_head(c, dy - 1)
-    transfer(c, body - head, "walk", "body")
+    body_markings(c, body - head, "walk")
     transfer(c, head, "walk", "head")
     c.outline()
     c.seam(head, body, 16 + dy)
@@ -387,7 +440,7 @@ def sleep(b):
     c.fill(tri([(17, 20), (18, 14), (21, 17)]) | tri([(21, 18), (23, 14), (25, 17)]))
     c.paint({(19, 17), (22, 17), (23, 16)}, "d")
     c.fill(head)
-    transfer(c, body - head, "sit", "body")
+    body_markings(c, body - head, "sit")
     transfer(c, head, "sit", "head")
     c.outline()
     c.seam(head, body, 22)
@@ -442,11 +495,14 @@ def build(name, blink, rows):
 def main():
     only = sys.argv[sys.argv.index("--only") + 1].split(",") if "--only" in sys.argv else list(COATS)
     os.makedirs(OUT, exist_ok=True)
-    rows = frames()
+    looks = {}
+    for striped in (False, True):  # the patched coats' frames, then the striped coats'
+        STYLE["stripes"] = striped
+        looks[striped] = frames()
     made = []
     for name in only:
         for blink in (False, True):
-            s = build(name, blink, rows)
+            s = build(name, blink, looks[name in STRIPED])
             s.save(os.path.join(OUT, f"{name}{'.blink' if blink else ''}.png"))
             if not blink:
                 made.append(s)
