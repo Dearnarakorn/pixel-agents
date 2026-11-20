@@ -505,6 +505,9 @@ export function getCharacterSprite(ch: Character, sprites: CharacterSprites): Sp
       if (!ch.isActive && !ch.isSubagent) {
         // A cat asleep in bed curls up (people's sheets have no sleeping frames).
         if (ch.inBed && sprites.sleeping) return sprites.sleeping[ch.dir][ch.frame % 2];
+        // A cat resting in its seat keeps its tail swishing: the seated frame and the
+        // paws-down typing frame differ only by the tail.
+        if (isCatBehaviour() && ch.frame % 2) return sprites.typing[ch.dir][1];
         return sprites.seated[ch.dir];
       }
       if (isReadingTool(ch.currentTool)) {

@@ -11,6 +11,7 @@
 import {
   CAT_ERRAND_CHANCE,
   CAT_INTEREST_TYPES,
+  CAT_SIDE_SEAT_SINK_PX,
   CAT_SIDE_SIT_Z_LIFT,
   CAT_SPOT_NEAREST,
 } from '../../constants.js';
@@ -37,6 +38,13 @@ export function catSitDir(dir: Direction): Direction {
 /** Whether a character is drawn sitting on the floor (Cat theme, not walking, not in a seat). */
 export function catSitsOnFloor(ch: Pick<Character, 'state' | 'catSitSec'>): boolean {
   return ch.state === CharacterState.IDLE && ((ch.catSitSec ?? 0) > 0 || catBehaviour);
+}
+
+/** Extra px a seated cat is drawn lower: side-on it sinks into its floor cushion
+ *  (Cat theme, seated facing left or right; asleep in bed it stays put). */
+export function catSideSeatSink(ch: Pick<Character, 'dir' | 'inBed'>): number {
+  if (!catBehaviour || ch.inBed) return 0;
+  return ch.dir === Direction.LEFT || ch.dir === Direction.RIGHT ? CAT_SIDE_SEAT_SINK_PX : 0;
 }
 
 /** The thing a sideways-seated cat's sprite overlaps: furniture as drawn (world pixels). */

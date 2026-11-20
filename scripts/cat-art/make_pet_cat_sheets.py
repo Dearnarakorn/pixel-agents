@@ -89,15 +89,28 @@ SIDE_SIT_PAW = {   # the front paw lifted a little and tucked by the chest (typi
     28: ".....accccbbbbbaabba............",
     29: "......aaaaaaaaaaaaaa............",
 }
+# The tail's second position (cols 0-10 of rows 25-29): flicked out along the
+# floor, its tip curling up further back. Frames alternate it with the curled
+# tail above, so a side-seated cat's tail swishes like the front/back sit's.
+SIDE_SIT_TAIL_OUT = {
+    25: "..........a",
+    26: "...aa.....a",
+    27: "..accaaaaaa",
+    28: "..acccccccb",
+    29: "...aaaaaaaa",
+}
 PET_SYMBOLS = {"a": OUTLINE, "b": FUR, "c": DARK, "d": LIGHT, "e": NOSE}
 
 
-def side_sit(paw_up=False):
+def side_sit(paw_up=False, tail_out=False):
     """The side sitting cat as a 32x32 image in the pet's own colours."""
     rows = list(SIDE_SIT)
     if paw_up:
         for y, text in SIDE_SIT_PAW.items():
             rows[y - SIDE_SIT_TOP] = text
+    if tail_out:
+        for y, text in SIDE_SIT_TAIL_OUT.items():
+            rows[y - SIDE_SIT_TOP] = text + rows[y - SIDE_SIT_TOP][len(text):]
     img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
     for dy, text in enumerate(rows):
         for x, ch in enumerate(text):
@@ -287,8 +300,8 @@ def build(coat, pet, blink):
                                               with_paper(c(pet["down_idle"][2]), 1), c(pet["down_idle"][0])],
         1: [c(i) for i in pet["up_walk"]] + [c(pet["up_idle"][k]) for k in (0, 1, 2, 1, 0)],
         2: [c(i, True) for i in pet["right_walk"]] + [
-            c(side_sit(paw_up=True), True), c(side_sit(), True),
-            with_side_paper(c(side_sit(), True), 0), with_side_paper(c(side_sit(), True), 1),
+            c(side_sit(paw_up=True), True), c(side_sit(tail_out=True), True),
+            with_side_paper(c(side_sit(), True), 0), with_side_paper(c(side_sit(tail_out=True), True), 1),
             c(side_sit(), True)],
     }
     sleep = [recolour_plain(sleep_pose(b), coat) for b in (0, 1)]

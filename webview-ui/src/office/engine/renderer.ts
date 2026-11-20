@@ -67,7 +67,7 @@ import type {
 } from '../types.js';
 import { CharacterState, TILE_SIZE, TileType } from '../types.js';
 import { getWallInstances, hasWallSprites, wallColorToHex } from '../wallTiles.js';
-import { catSideSitZ, catSitsOnFloor } from './catBehaviour.js';
+import { catSideSeatSink, catSideSitZ, catSitsOnFloor } from './catBehaviour.js';
 import { getCharacterSprite } from './characters.js';
 import { renderMatrixEffect } from './matrixEffect.js';
 import { getPetSpriteData } from './petEntity.js';
@@ -401,7 +401,7 @@ export function renderScene(
     // (a cat sitting on the floor sits lower than one on a chair: its frames are lifted for seats)
     const sittingOffset =
       ch.state === CharacterState.TYPE
-        ? CHARACTER_SITTING_OFFSET_PX
+        ? CHARACTER_SITTING_OFFSET_PX + catSideSeatSink(ch)
         : catSitsOnFloor(ch)
           ? CAT_FLOOR_SIT_OFFSET_PX
           : 0;

@@ -283,6 +283,9 @@ export const CAT_SLEEP_BREATH_SEC = 1.2;
 export const CAT_SPOT_NEAREST = 6;
 /** A cat sitting on the floor is drawn this much lower: its sitting frames are lifted for chairs. */
 export const CAT_FLOOR_SIT_OFFSET_PX = 3;
+/** A cat seated side-on is drawn this much lower, so it sits down into its floor cushion
+ *  rather than on the cushion's top edge. */
+export const CAT_SIDE_SEAT_SINK_PX = 2;
 /** A side-seated cat sorts this far in front of the table its head reaches over. */
 export const CAT_SIDE_SIT_Z_LIFT = 0.25;
 /** Furniture a cat goes to and sits by (its toys, posts, trees, bowls, the window).
