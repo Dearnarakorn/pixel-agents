@@ -200,20 +200,30 @@ class Cat:
 
 
 # --------------------------------------------------------------- front (down)
-def thick(pts):
-    """A 2 px thick tail along a 1 px path: each point doubled inward and, low down, upward."""
-    out = set(pts)
-    for x, y in pts:
-        out.add((x - 1, y))
-        if y >= 27:
-            out.add((x, y - 1))
-    return out
+def curve(p0, p1, p2, p3, r=1.0):
+    """A tail: the pixels within r of a cubic Bezier curve -- one soft, even piece that
+    curls (drawn as 1 px diagonal steps, tails read as stair-steps or a ladder)."""
+    pts = set()
+    for i in range(121):
+        t = i / 120
+        a, b, cc, d = (1 - t) ** 3, 3 * t * (1 - t) ** 2, 3 * t * t * (1 - t), t ** 3
+        x = a * p0[0] + b * p1[0] + cc * p2[0] + d * p3[0]
+        y = a * p0[1] + b * p1[1] + cc * p2[1] + d * p3[1]
+        for px in range(int(x) - 2, int(x) + 3):
+            for py in range(int(y) - 2, int(y) + 3):
+                if (px + 0.5 - x) ** 2 + (py + 0.5 - y) ** 2 <= r * r:
+                    pts.add((px, py))
+    return {(x, y) for x, y in pts if 0 <= x < W and 0 <= y < H}
 
 
-FRONT_TAILS = [  # the tail by the right flank, thick and long: curled up, flicked out, laid down
-    thick([(25, 28), (26, 28), (27, 27), (28, 26), (28, 25), (28, 24), (28, 23), (27, 22)]),
-    thick([(25, 28), (26, 28), (27, 28), (28, 27), (29, 26), (30, 25), (30, 24), (30, 23)]),
-    thick([(25, 28), (26, 28), (27, 28), (28, 28), (29, 28), (30, 27), (30, 26), (30, 25)]),
+def mirror(pts):
+    return {(W - 1 - x, y) for x, y in pts}
+
+
+FRONT_TAILS = [  # by the right flank: curled up beside it, tip raised, laid along the floor
+    curve((23, 28.5), (29, 30), (30.5, 24), (27.5, 21.5)),
+    curve((23, 28.5), (29, 30), (30.5, 25), (30, 20.5)),
+    curve((23, 28.5), (27, 30), (30.5, 29.5), (30.5, 26)),
 ]
 
 
@@ -272,10 +282,9 @@ def front_walk(f):
     up = {0: (1, 0), 1: (0, 0), 2: (0, 1)}[f]
     for x0, u in ((10, up[0]), (18, up[1])):
         c.fill(paw_bump(x0, 5, 25, 29 - u), "b")
-    # the tail held up behind, its top showing past the right flank, swaying as it walks
-    sway = (0, 1, 0)[f]
-    tail = [(25, 23), (26, 22), (27, 21), (28 + sway, 20), (28 + sway, 19), (27 + sway, 18)]
-    c.fill(thick([(x, y + bob) for x, y in tail]), "c")
+    # the tail held up behind, rising past the right shoulder, its tip swaying as it walks
+    sway = (0, 1.5, 0)[f]
+    c.fill(curve((22, 22 + bob), (28, 21 + bob), (29.5 + sway, 16 + bob), (27 + sway, 13.5 + bob)), "c")
     body = ell(16, 22.6 + bob, 10.4, 5.4) | ell(16, 19.8 + bob, 8.4, 5)
     c.fill(body)
     head = front_face(c, bob - 2)
@@ -288,12 +297,10 @@ def front_walk(f):
 
 
 # ---------------------------------------------------------------- back (up)
-_BACK_TAIL = [(18, 28), (19, 28), (20, 28), (21, 28), (22, 27), (23, 26), (24, 25), (25, 24),
-              (25, 23), (24, 22)]
-BACK_TAILS = [  # sitting: the tail curled out to one side over the rump, swishing side to side
-    set(_BACK_TAIL),                                                   # out to the right, up
-    {(x, y + (1 if y < 26 else 0)) for x, y in _BACK_TAIL[:-1]},       # lower, the tip down
-    {(31 - x, y) for x, y in _BACK_TAIL},                              # out to the left
+BACK_TAILS = [  # sitting: curled round the side of the rump, swishing from side to side
+    curve((16, 29), (24, 31), (29, 28), (28, 23)),                     # round to the right, up
+    curve((16, 29), (23, 31), (28.5, 30), (30, 26.5)),                 # out to the right, low
+    mirror(curve((16, 29), (24, 31), (29, 28), (28, 23))),             # round to the left
 ]
 
 
@@ -333,12 +340,12 @@ def back_walk(f):
     # the tail held up and out to one side, clear of the body's outline, swinging to the
     # other side as the cat walks (hanging down it read as a third leg, drawn up the middle
     # of the back as a split)
-    pts = [(23, 25), (24, 24), (25, 23), (26, 22), (27, 21), (27, 20), (26, 19)]
+    tail = curve((21, 25 + bob), (27, 25 + bob), (29.5, 20 + bob), (27, 16.5 + bob))
     if f == 1:
-        pts = [(x, y - 1) for x, y in pts]
+        tail = curve((21, 25 + bob), (27, 25 + bob), (30, 21 + bob), (29.5, 16 + bob))
     if f == 2:
-        pts = [(31 - x, y) for x, y in pts]
-    c.part({(x, y + bob) for x, y in pts}, lambda x, y: "c")      # dark, like the slim cat's
+        tail = mirror(tail)
+    c.part(tail, lambda x, y: "c")                                 # dark, like the slim cat's
     return c.g
 
 
@@ -430,11 +437,10 @@ def sleep(b):
     c = Cat()
     body = ell(13.5, 23.2 - b * 0.5, 10.5, 6.4 + b * 0.5)
     c.fill(body)
-    # a head with a shape: a muzzle that juts out and tall pointed ears (a plain round
-    # head read as blunt)
-    head = ell(21.5, 22.4, 5.6, 4.6) | ell(25.4, 24.4, 2.6, 2.0)
-    c.fill(tri([(17, 20), (17.5, 12.5), (21, 17)]) | tri([(21, 18), (23.5, 12.5), (25.5, 17)]))
-    c.paint({(18, 16), (18, 17), (23, 15), (23, 16)}, "d")
+    # the round head (a pointed muzzle and tall ears were tried, and read as too sharp)
+    head = ell(22, 22.6, 6, 4.8) | ell(22.4, 24.8, 5.6, 2.8)
+    c.fill(tri([(17, 20), (18, 14), (21, 17)]) | tri([(21, 18), (23, 14), (25, 17)]))
+    c.paint({(19, 17), (22, 17), (23, 16)}, "d")
     c.fill(head)
     transfer(c, body - head, "sit", "body")
     transfer(c, head, "sit", "head")
