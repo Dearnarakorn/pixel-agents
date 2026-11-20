@@ -45,13 +45,18 @@ def role_grid(img):
 
 
 _PET = load_pet()
-# The slim frame each heavy view copies its markings from, with the boxes (x0, y0, x1, y1)
-# of that frame's head and torso.
+_FRONT, _BACK = role_grid(_PET["down_idle"][0]), role_grid(_PET["up_idle"][0])
+_WALK, _SIT = role_grid(_PET["right_walk"][0]), role_grid(slim_side_sit())
+# Where each heavy view copies its markings from: a slim frame and a box (x0, y0, x1, y1)
+# in it, for the head and for the body. The boxes leave out the slim cat's anatomy
+# lines, which stretched into streaks: the sitting thigh (a diagonal crease), so the side
+# sit takes its body from the walking cat's clean saddle; and the gap between the front
+# legs (a dark "necktie"), so the front takes only the chest rows.
 SLIM = {
-    "front": (role_grid(_PET["down_idle"][0]), (1, 20, 13, 26), (2, 27, 12, 30)),
-    "back": (role_grid(_PET["up_idle"][0]), (1, 16, 14, 21), (2, 22, 13, 29)),
-    "walk": (role_grid(_PET["right_walk"][0]), (17, 12, 25, 22), (7, 18, 16, 24)),
-    "sit": (role_grid(slim_side_sit()), (17, 12, 25, 21), (11, 21, 23, 28)),
+    "front": {"head": (_FRONT, (1, 20, 13, 26)), "body": (_FRONT, (2, 26, 12, 27))},
+    "back": {"head": (_BACK, (1, 16, 14, 21)), "body": (_BACK, (2, 22, 13, 29))},
+    "walk": {"head": (_WALK, (17, 12, 25, 22)), "body": (_WALK, (7, 18, 16, 24))},
+    "sit": {"head": (_SIT, (17, 12, 25, 21)), "body": (_WALK, (7, 18, 16, 24))},
 }
 
 
@@ -59,8 +64,7 @@ def transfer(c, part, view, which):
     """Give a heavy head or body the slim cat's markings: each of its pixels takes the
     colour role (fur, dark, light) at the same relative spot of the slim frame's head or
     torso, so every coat's pattern carries over (stretched to the heavy shape)."""
-    grid, head_box, body_box = SLIM[view]
-    sx0, sy0, sx1, sy1 = head_box if which == "head" else body_box
+    grid, (sx0, sy0, sx1, sy1) = SLIM[view][which]
     pts = [(x, y) for (x, y) in part if (x, y) in c.sil and c.g[y][x] in "bcd"]
     if not pts:
         return
