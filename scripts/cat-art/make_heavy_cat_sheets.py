@@ -335,6 +335,21 @@ def side_head(c, dy=0):
     return head
 
 
+def side_head_markings(c, head):
+    """The slim cat's side head is dark only over the crown and down the back of the head;
+    stretched over the bigger heavy head that dark became a blotch on the cheek, so it is
+    kept to a band along the top (2 px) and the back (1 px) of the head, following its curve."""
+    pts = [(x, y) for (x, y) in head if (x, y) in c.sil]
+    top = {}
+    back = {}
+    for x, y in pts:
+        top[x] = min(top.get(x, y), y)
+        back[y] = min(back.get(y, x), x)
+    for x, y in pts:
+        if c.g[y][x] == "c" and y - top[x] > 2 and x - back[y] > 1:
+            c.g[y][x] = "b"
+
+
 def side_face_marks(c, dy=0):
     clear_fur(c, (21, 13 + dy, 27, 20 + dy))  # round the eye and down the muzzle
     c.dots([(23, 15 + dy, "y"), (23, 16 + dy, "a"), (26, 17 + dy, "e"), (25, 19 + dy, "a")])
@@ -357,6 +372,7 @@ def side_sit(paw=False, out=False, paper=None):
     head = side_head(c)
     transfer(c, body - head, "sit", "body")
     transfer(c, head, "sit", "head")
+    side_head_markings(c, head)
     c.outline()
     c.seam(head, body, 17)
     side_face_marks(c)
@@ -383,6 +399,7 @@ def side_walk(f):
     head = side_head(c, dy - 1)
     transfer(c, body - head, "walk", "body")
     transfer(c, head, "walk", "head")
+    side_head_markings(c, head)
     c.outline()
     c.seam(head, body, 16 + dy)
     side_face_marks(c, dy - 1)
@@ -403,6 +420,7 @@ def sleep(b):
     c.fill(head)
     transfer(c, body - head, "sit", "body")
     transfer(c, head, "sit", "head")
+    side_head_markings(c, head)
     c.outline()
     c.seam(head, body, 22)
     # a soft shut eye (a little smile-curve, no brow above it: a dark mark there read as a frown)
