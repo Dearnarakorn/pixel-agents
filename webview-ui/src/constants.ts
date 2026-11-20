@@ -283,8 +283,9 @@ export const CAT_SLEEP_BREATH_SEC = 1.2;
 export const CAT_SPOT_NEAREST = 6;
 /** A cat sitting on the floor is drawn this much lower: its sitting frames are lifted for chairs. */
 export const CAT_FLOOR_SIT_OFFSET_PX = 3;
-/** Heavy cats (catHeavy.ts): a cat turns heavy once this share (%) of its context is used. */
-export const CAT_HEAVY_DEFAULT_PCT = 60;
+/** Heavy cats (catHeavy.ts): a cat turns heavy once this share (%) of its context is used.
+ *  Context windows are 1M tokens now, so 60% (600k) was rarely reached. */
+export const CAT_HEAVY_DEFAULT_PCT = 40;
 /** The Settings slider's range; its top end turns heavy cats off. */
 export const CAT_HEAVY_MIN_PCT = 20;
 export const CAT_HEAVY_OFF_PCT = 100;
