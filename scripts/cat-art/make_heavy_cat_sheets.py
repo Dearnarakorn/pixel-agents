@@ -215,7 +215,20 @@ def front_face(c, dy=0):
     return head
 
 
+def clear_fur(c, box):
+    """Fur, not markings, inside box (x0, y0, x1, y1): the eyes sit in clean fur like the slim
+    cat's, where a copied dark patch read as a black eye."""
+    x0, y0, x1, y1 = box
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            if c.g[y][x] == "c" and all((x + dx, y + dy) in c.sil for dx, dy in N4):
+                c.g[y][x] = "b"
+
+
 def front_face_marks(c, dy=0):
+    for ex in (13, 19):
+        clear_fur(c, (ex - 3, 12 + dy, ex + 3, 16 + dy))
+    clear_fur(c, (14, 15 + dy, 18, 18 + dy))   # the muzzle
     c.dots([(13, 14 + dy, "y"), (13, 15 + dy, "a"), (19, 14 + dy, "y"), (19, 15 + dy, "a"),
             (16, 16 + dy, "e"), (15, 17 + dy, "a"), (17, 17 + dy, "a"), (16, 17 + dy, "a")])
 
@@ -323,6 +336,7 @@ def side_head(c, dy=0):
 
 
 def side_face_marks(c, dy=0):
+    clear_fur(c, (21, 13 + dy, 27, 20 + dy))  # round the eye and down the muzzle
     c.dots([(23, 15 + dy, "y"), (23, 16 + dy, "a"), (26, 17 + dy, "e"), (25, 19 + dy, "a")])
 
 
