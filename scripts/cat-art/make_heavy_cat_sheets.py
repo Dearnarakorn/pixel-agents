@@ -200,10 +200,20 @@ class Cat:
 
 
 # --------------------------------------------------------------- front (down)
-FRONT_TAILS = [  # the tail by the right flank: curled up, flicked out, laid down
-    {(26, 28), (27, 28), (27, 27), (28, 26), (28, 25), (27, 24)},
-    {(26, 28), (27, 28), (28, 27), (29, 26), (29, 25), (29, 24)},
-    {(26, 28), (27, 28), (28, 28), (29, 27), (29, 26), (28, 26)},
+def thick(pts):
+    """A 2 px thick tail along a 1 px path: each point doubled inward and, low down, upward."""
+    out = set(pts)
+    for x, y in pts:
+        out.add((x - 1, y))
+        if y >= 27:
+            out.add((x, y - 1))
+    return out
+
+
+FRONT_TAILS = [  # the tail by the right flank, thick and long: curled up, flicked out, laid down
+    thick([(25, 28), (26, 28), (27, 27), (28, 26), (28, 25), (28, 24), (28, 23), (27, 22)]),
+    thick([(25, 28), (26, 28), (27, 28), (28, 27), (29, 26), (30, 25), (30, 24), (30, 23)]),
+    thick([(25, 28), (26, 28), (27, 28), (28, 28), (29, 28), (30, 27), (30, 26), (30, 25)]),
 ]
 
 
@@ -238,7 +248,7 @@ def front_sit(tail=0, paper=None):
     c = Cat()
     body = ell(16, 24.4, 11, 6.0) | ell(16, 21, 8.4, 5)
     c.fill(body)
-    c.fill(FRONT_TAILS[tail] | {(x + 1, y) for x, y in FRONT_TAILS[tail] if y >= 26}, "c")
+    c.fill(FRONT_TAILS[tail], "c")
     head = front_face(c)
     transfer(c, body - head, "front", "body")
     transfer(c, head, "front", "head")
@@ -250,7 +260,7 @@ def front_sit(tail=0, paper=None):
         c.dots([(x0, 29, "a"), (x0 + 1, 29, "b"), (x0 + 2, 29, "b"), (x0 + 3, 29, "a"),
                 (x0, 30, "a"), (x0 + 1, 30, "a"), (x0 + 2, 30, "a"), (x0 + 3, 30, "a")])
     if paper is not None:
-        c.paper(13, 25, 7, 5, paper)
+        c.paper(13, 22, 7, 5, paper)                   # held up at the chest, not at the floor
     return c.g
 
 
@@ -262,6 +272,10 @@ def front_walk(f):
     up = {0: (1, 0), 1: (0, 0), 2: (0, 1)}[f]
     for x0, u in ((10, up[0]), (18, up[1])):
         c.fill(paw_bump(x0, 5, 25, 29 - u), "b")
+    # the tail held up behind, its top showing past the right flank, swaying as it walks
+    sway = (0, 1, 0)[f]
+    tail = [(25, 23), (26, 22), (27, 21), (28 + sway, 20), (28 + sway, 19), (27 + sway, 18)]
+    c.fill(thick([(x, y + bob) for x, y in tail]), "c")
     body = ell(16, 22.6 + bob, 10.4, 5.4) | ell(16, 19.8 + bob, 8.4, 5)
     c.fill(body)
     head = front_face(c, bob - 2)
@@ -274,10 +288,12 @@ def front_walk(f):
 
 
 # ---------------------------------------------------------------- back (up)
-BACK_TAILS = [  # sitting: the tail down the middle of the back, swishing
-    {(16, 29), (16, 28), (16, 27), (17, 26), (17, 25), (16, 24)},
-    {(16, 29), (16, 28), (16, 27), (16, 26), (16, 25), (16, 24)},
-    {(16, 29), (16, 28), (16, 27), (15, 26), (15, 25), (16, 24)},
+_BACK_TAIL = [(18, 28), (19, 28), (20, 28), (21, 28), (22, 27), (23, 26), (24, 25), (25, 24),
+              (25, 23), (24, 22)]
+BACK_TAILS = [  # sitting: the tail curled out to one side over the rump, swishing side to side
+    set(_BACK_TAIL),                                                   # out to the right, up
+    {(x, y + (1 if y < 26 else 0)) for x, y in _BACK_TAIL[:-1]},       # lower, the tip down
+    {(31 - x, y) for x, y in _BACK_TAIL},                              # out to the left
 ]
 
 
@@ -378,7 +394,7 @@ def side_sit(paw=False, out=False, paper=None):
     side_face_marks(c)
     tail_wrap(c, out)
     if paw:
-        c.part({(23, 22), (24, 22)})                                             # a paw up (typing)
+        c.part({(22, 22), (23, 22), (24, 22), (23, 21), (24, 21)})               # a paw up (typing)
     else:
         c.part({(20, 29), (21, 29)})                                             # a front paw peeking out
     if paper is not None:
@@ -414,17 +430,20 @@ def sleep(b):
     c = Cat()
     body = ell(13.5, 23.2 - b * 0.5, 10.5, 6.4 + b * 0.5)
     c.fill(body)
-    head = ell(22, 22.6, 6, 4.8) | ell(22.4, 24.8, 5.6, 2.8)
-    c.fill(tri([(17, 20), (18, 14), (21, 17)]) | tri([(21, 18), (23, 14), (25, 17)]))
-    c.paint({(19, 17), (22, 17), (23, 16)}, "d")
+    # a head with a shape: a muzzle that juts out and tall pointed ears (a plain round
+    # head read as blunt)
+    head = ell(21.5, 22.4, 5.6, 4.6) | ell(25.4, 24.4, 2.6, 2.0)
+    c.fill(tri([(17, 20), (17.5, 12.5), (21, 17)]) | tri([(21, 18), (23.5, 12.5), (25.5, 17)]))
+    c.paint({(18, 16), (18, 17), (23, 15), (23, 16)}, "d")
     c.fill(head)
     transfer(c, body - head, "sit", "body")
     transfer(c, head, "sit", "head")
     side_head_markings(c, head)
+    clear_fur(c, (21, 21, 28, 26))
     c.outline()
     c.seam(head, body, 22)
-    # a soft shut eye (a little smile-curve, no brow above it: a dark mark there read as a frown)
-    c.dots([(22, 22, "a"), (23, 23, "a"), (24, 23, "a"), (25, 22, "a"), (27, 24, "e")])
+    # the shut eye: a short straight lid line (a curve read as a smiling mouth), the nose
+    c.dots([(22, 23, "a"), (23, 23, "a"), (24, 23, "a"), (27, 24, "e")])
     c.part({(x, 28) for x in range(8, 24)}, lambda x, y: "c")
     return c.g
 
