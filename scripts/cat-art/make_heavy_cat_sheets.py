@@ -68,11 +68,20 @@ def transfer(c, part, view, which):
     pts = [(x, y) for (x, y) in part if (x, y) in c.sil and c.g[y][x] in "bcd"]
     if not pts:
         return
-    x0, x1 = min(p[0] for p in pts), max(p[0] for p in pts)
-    y0, y1 = min(p[1] for p in pts), max(p[1] for p in pts)
+    # Each pixel's place is measured across its own row and down its own column, not
+    # across one box, so the pattern wraps round the body: stripes and the saddle curve
+    # along the round outline instead of running dead straight.
+    rows, cols = {}, {}
     for x, y in pts:
-        tx = sx0 + (x - x0) / max(1, x1 - x0) * (sx1 - sx0)
-        ty = sy0 + (y - y0) / max(1, y1 - y0) * (sy1 - sy0)
+        lo, hi = rows.get(y, (x, x))
+        rows[y] = (min(lo, x), max(hi, x))
+        lo, hi = cols.get(x, (y, y))
+        cols[x] = (min(lo, y), max(hi, y))
+    painted = {}
+    for x, y in pts:
+        (rx0, rx1), (cy0, cy1) = rows[y], cols[x]
+        tx = sx0 + (x - rx0) / max(1, rx1 - rx0) * (sx1 - sx0)
+        ty = sy0 + (y - cy0) / max(1, cy1 - cy0) * (sy1 - sy0)
         best = None
         for r in range(3):  # the nearest fur pixel there (not an outline or eye)
             for dy in range(-r, r + 1):
@@ -87,7 +96,20 @@ def transfer(c, part, view, which):
         if best:
             # the slim cat's light pixels are its inner ears' pink: stretched over a heavy
             # face they made pink blotches, so they come over as fur (the heavy ears keep theirs)
-            c.g[y][x] = "b" if best[1] == "d" else best[1]
+            painted[(x, y)] = "b" if best[1] == "d" else best[1]
+    # Round the patches off: a pixel nearly surrounded by the other colour (6 of its 8
+    # neighbours) takes theirs, which wears down the stair-step corners of stretched
+    # pixels while thin stripes (one pixel across, fur on both sides) survive.
+    nxt = dict(painted)
+    for (x, y), ch in painted.items():
+        near = [painted.get((x + dx, y + dy)) for dx in (-1, 0, 1) for dy in (-1, 0, 1) if dx or dy]
+        near = [n for n in near if n]
+        other = "c" if ch == "b" else "b"
+        if len(near) >= 6 and sum(n == other for n in near) >= 6:
+            nxt[(x, y)] = other
+    painted = nxt
+    for (x, y), ch in painted.items():
+        c.g[y][x] = ch
 
 
 def ell(cx, cy, rx, ry):
