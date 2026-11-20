@@ -81,18 +81,20 @@ const PUFF_COUNT = 8;
  */
 export function catPoofPuffs(t: number): CatPuff[] {
   const grow = t < 0.5;
-  const ring = grow ? 2 + 8 * t : 6 + 12 * (t - 0.5);
-  const r = grow ? 1 + 10 * t : 12 * (1 - t);
+  // The ring sits wide of the middle cloud, so the edge stays bumpy (a cartoon puff);
+  // a middle cloud as big as the ring merged it all into one smooth blob.
+  const ring = grow ? 3 + 10 * t : 8 + 12 * (t - 0.5);
+  const r = grow ? 1 + 9 * t : 11 * (1 - t);
   const puffs: CatPuff[] = [];
   for (let i = 0; i < PUFF_COUNT; i++) {
     const a = (i / PUFF_COUNT) * Math.PI * 2 + t;
     puffs.push({
       dx: Math.round(Math.cos(a) * ring * 1.2),
-      dy: Math.round(Math.sin(a) * ring * 0.9),
+      dy: Math.round(Math.sin(a) * ring),
       r: Math.max(0, Math.round(r)),
     });
   }
-  puffs.push({ dx: 0, dy: 0, r: Math.max(0, Math.round(grow ? 1 + 14 * t : 16 * (1 - t) - 1)) });
+  puffs.push({ dx: 0, dy: 0, r: Math.max(0, Math.round(grow ? 1 + 12 * t : 14 * (1 - t) - 1)) });
   return puffs.filter((p) => p.r > 0);
 }
 

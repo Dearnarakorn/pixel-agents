@@ -298,7 +298,7 @@ export const CAT_POOF_SEC = 0.6;
 export const CAT_POOF_FILL = '#f6f2ea';
 export const CAT_POOF_EDGE = '#b9b2a8';
 /** World px above a cat's feet where its puff is centred (about the middle of the cat). */
-export const CAT_POOF_RISE_PX = 10;
+export const CAT_POOF_RISE_PX = 15;
 /** The puff sorts this far in front of its cat, so it covers it. */
 export const CAT_POOF_Z_LIFT = 0.05;
 /** A cat seated side-on is drawn this much lower, so it sits down into its floor cushion
