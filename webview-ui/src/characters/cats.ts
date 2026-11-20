@@ -6,17 +6,25 @@
  * seated like a person's sheet, then sleep1-2), every frame 32x32, since a cat seen
  * side-on is long (the office centres a sprite on its own width). Only the
  * office and its mug shots change: the Characters view still edits the
- * people, and the Office theme brings them back.
+ * people, and the Office theme brings them back. Each coat also has a heavy
+ * cat (cats/heavy/), worn while the agent's context is full (catHeavy.ts).
  */
 
 import { rgbaToHex } from '../../../core/src/assets/colorUtils.js';
 import type { CharacterDirectionSprites } from '../../../core/src/assets/types.js';
 import { CAT_COAT_ORDER, CAT_FRAME_PX } from '../constants.js';
+import { initCatHeavySetting } from './catHeavySetting.js';
 import { decodePng } from './loadWardrobe.js';
 import { type OfficeCatSheets, setOfficeCats } from './officeSprites.js';
 
 /** './cats/ginger.png' → data URI (inlined, like the wardrobe, so canvases stay untainted). */
 const pngs = import.meta.glob<string>('./cats/*.png', {
+  eager: true,
+  query: '?inline',
+  import: 'default',
+});
+/** The same coats as heavy cats ('./cats/heavy/ginger.png'), drawn by make_heavy_cat_sheets.py. */
+const heavyPngs = import.meta.glob<string>('./cats/heavy/*.png', {
   eager: true,
   query: '?inline',
   import: 'default',
@@ -55,14 +63,25 @@ function sheetToCatSprites(img: {
 
 let loading: Promise<OfficeCatSheets[]> | null = null;
 
-async function decodeCoat(coat: string): Promise<OfficeCatSheets | null> {
-  const open = pngs[`./cats/${coat}.png`];
-  const shut = pngs[`./cats/${coat}.blink.png`];
+/** A coat's open- and shut-eyed sheets, or null when either is missing or the wrong size. */
+async function decodePair(
+  open: string | undefined,
+  shut: string | undefined,
+): Promise<{ open: CharacterDirectionSprites; shut: CharacterDirectionSprites } | null> {
   if (!open || !shut) return null;
   const [o, s] = await Promise.all([decodePng(open), decodePng(shut)]);
   const openSprites = sheetToCatSprites(o);
   const shutSprites = sheetToCatSprites(s);
   return openSprites && shutSprites ? { open: openSprites, shut: shutSprites } : null;
+}
+
+async function decodeCoat(coat: string): Promise<OfficeCatSheets | null> {
+  const [slim, heavy] = await Promise.all([
+    decodePair(pngs[`./cats/${coat}.png`], pngs[`./cats/${coat}.blink.png`]),
+    decodePair(heavyPngs[`./cats/heavy/${coat}.png`], heavyPngs[`./cats/heavy/${coat}.blink.png`]),
+  ]);
+  if (!slim) return null;
+  return heavy ? { ...slim, heavy } : slim;
 }
 
 /** The coats, decoded once, in CAT_COAT_ORDER (a coat that fails to decode is left out). */
@@ -83,6 +102,7 @@ export function setCatMode(on: boolean): void {
     setOfficeCats(null);
     return;
   }
+  initCatHeavySetting();
   void loadCats().then((cats) => {
     if (catMode) setOfficeCats(cats);
   });

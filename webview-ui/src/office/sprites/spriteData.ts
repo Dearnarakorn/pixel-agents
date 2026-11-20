@@ -39,13 +39,15 @@ interface LoadedCharacterData {
 let loadedCharacters: LoadedCharacterData[] | null = null;
 
 /**
- * A palette's sheet as its nth repeat (repeat ≥ 1) and/or mid-blink, or null to draw
- * the plain sheet (a palette that can't blink, or one with nothing to vary).
+ * A palette's sheet as its nth repeat (repeat ≥ 1), mid-blink and/or heavy (a Cat theme
+ * cat whose context is full, catHeavy.ts), or null to draw the plain sheet (a palette
+ * that can't blink or be heavy, or one with nothing to vary).
  */
 type VariantSource = (
   palette: number,
   repeat: number,
   blink: boolean,
+  heavy: boolean,
 ) => LoadedCharacterData | null;
 let variants: VariantSource | null = null;
 
@@ -124,13 +126,14 @@ function emptySprite(w: number, h: number): SpriteData {
 }
 
 /** A character's sprites: its own sheet, or the nth repeat's (its clothes recoloured),
- *  with its eyes shut when `blink`. */
+ *  with its eyes shut when `blink`, its heavy cat when `heavy` (where there is one). */
 export function getCharacterSprites(
   paletteIndex: number,
   repeat = 0,
   blink = false,
+  heavy = false,
 ): CharacterSprites {
-  const cacheKey = `${paletteIndex}:${repeat}:${blink ? 1 : 0}`;
+  const cacheKey = `${paletteIndex}:${repeat}:${blink ? 1 : 0}:${heavy ? 1 : 0}`;
   const cached = spriteCache.get(cacheKey);
   if (cached) return cached;
 
@@ -139,7 +142,13 @@ export function getCharacterSprites(
   if (loadedCharacters) {
     // Use pre-colored character sprites directly (no palette swapping)
     const palette = paletteIndex % loadedCharacters.length;
-    const variant = repeat || blink ? variants?.(palette, repeat, blink) : null;
+    const variant = repeat || blink || heavy ? variants?.(palette, repeat, blink, heavy) : null;
+    if (!variant && heavy) {
+      // No heavy sheet for this one: its usual sprites, shared under this key too.
+      sprites = getCharacterSprites(paletteIndex, repeat, blink);
+      spriteCache.set(cacheKey, sprites);
+      return sprites;
+    }
     if (!variant && blink) {
       // No blink for this one: its open-eyed sprites, shared under this key too.
       sprites = getCharacterSprites(paletteIndex, repeat);

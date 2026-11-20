@@ -1,7 +1,13 @@
 import { type CSSProperties, useRef, useState } from 'react';
 
 import { isCameraFollowEnabled, setCameraFollowEnabled } from '../cameraFollow.js';
-import { NOTIFICATION_VOLUME_STEP_PCT } from '../constants.js';
+import { readStoredCatHeavyPct, storeCatHeavyPct } from '../characters/catHeavySetting.js';
+import {
+  CAT_HEAVY_MIN_PCT,
+  CAT_HEAVY_OFF_PCT,
+  CAT_HEAVY_STEP_PCT,
+  NOTIFICATION_VOLUME_STEP_PCT,
+} from '../constants.js';
 import { isDesktopNotifyEnabled, setDesktopNotifyEnabled } from '../desktopNotify.js';
 import { officeRadio } from '../music/musicEngine.js';
 import { useOfficeRadio } from '../music/useOfficeRadio.js';
@@ -90,6 +96,9 @@ export function SettingsModal({
   const [cameraFollow, setCameraFollow] = useState(isCameraFollowEnabled);
   const [desktopNotify, setDesktopNotify] = useState(isDesktopNotifyEnabled);
   const officeTheme = useOfficeTheme();
+  const [heavyPct, setHeavyPct] = useState(readStoredCatHeavyPct);
+  const heavyFillPct =
+    ((heavyPct - CAT_HEAVY_MIN_PCT) / (CAT_HEAVY_OFF_PCT - CAT_HEAVY_MIN_PCT)) * 100;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [assetDirDraft, setAssetDirDraft] = useState('');
   // Usage Bars: installing rewrites the user's status line, so it asks first
@@ -272,6 +281,33 @@ export function SettingsModal({
             transport.send({ type: 'setOfficeTheme', theme: next });
           }}
         />
+        {officeTheme === 'cat' && (
+          <label
+            className="flex items-center gap-8 w-full py-6 px-10"
+            title="A cat turns heavy once this much of its context is used, and slim again after a compaction or /clear (this browser only; all the way right turns it off)"
+          >
+            <span className="shrink-0">Heavy Cat At</span>
+            <input
+              type="range"
+              min={CAT_HEAVY_MIN_PCT}
+              max={CAT_HEAVY_OFF_PCT}
+              step={CAT_HEAVY_STEP_PCT}
+              value={heavyPct}
+              aria-label="Context used before a cat turns heavy"
+              className="pixel-range flex-1 min-w-0"
+              style={{ '--range-fill': `${heavyFillPct}%` } as CSSProperties}
+              onChange={(e) => {
+                const pct = Number(e.target.value);
+                setHeavyPct(pct);
+                storeCatHeavyPct(pct);
+              }}
+            />
+            <PixelText
+              text={heavyPct >= CAT_HEAVY_OFF_PCT ? 'Off' : `${heavyPct}%`}
+              className="w-44 justify-end shrink-0"
+            />
+          </label>
+        )}
         <Checkbox
           label="Music Player"
           title="The office radio's player, bottom of the office"

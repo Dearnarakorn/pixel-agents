@@ -283,6 +283,14 @@ export const CAT_SLEEP_BREATH_SEC = 1.2;
 export const CAT_SPOT_NEAREST = 6;
 /** A cat sitting on the floor is drawn this much lower: its sitting frames are lifted for chairs. */
 export const CAT_FLOOR_SIT_OFFSET_PX = 3;
+/** Heavy cats (catHeavy.ts): a cat turns heavy once this share (%) of its context is used. */
+export const CAT_HEAVY_DEFAULT_PCT = 60;
+/** The Settings slider's range; its top end turns heavy cats off. */
+export const CAT_HEAVY_MIN_PCT = 20;
+export const CAT_HEAVY_OFF_PCT = 100;
+export const CAT_HEAVY_STEP_PCT = 5;
+/** localStorage key for that threshold (per browser, like the notification volume). */
+export const CAT_HEAVY_STORAGE_KEY = 'pixel-agents.catHeavyAt';
 /** A cat seated side-on is drawn this much lower, so it sits down into its floor cushion
  *  rather than on the cushion's top edge. */
 export const CAT_SIDE_SEAT_SINK_PX = 2;

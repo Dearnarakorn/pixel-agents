@@ -87,10 +87,12 @@ function blinkSprites(
 /** A step through the coats per repeat, so two copies of a character wear different cats. */
 const CAT_REPEAT_STEP = 3;
 
-/** One Cat Mode coat: its office sprites with eyes open and shut (characters/cats.ts). */
+/** One Cat Mode coat: its office sprites with eyes open and shut (characters/cats.ts),
+ *  and the same coat as a heavy cat when its sheets loaded (office/engine/catHeavy.ts). */
 export interface OfficeCatSheets {
   open: CharacterDirectionSprites;
   shut: CharacterDirectionSprites;
+  heavy?: { open: CharacterDirectionSprites; shut: CharacterDirectionSprites };
 }
 
 /** Cat Mode's coats while it is on, else null (set by characters/cats.ts, the DOM side). */
@@ -104,15 +106,18 @@ export function setOfficeCats(sheets: readonly OfficeCatSheets[] | null): void {
 
 /**
  * Cat Mode: every palette (profiles, then external sprites) wears a coat by
- * its index, a repeat steps to another coat, a blink shuts the cat's eyes.
+ * its index, a repeat steps to another coat, a blink shuts the cat's eyes, a
+ * full context makes it the coat's heavy cat (null when the coat has none).
  */
 function syncCats(cats: readonly OfficeCatSheets[], count: number): void {
   const coat = (palette: number, repeat: number) =>
     cats[(palette + repeat * CAT_REPEAT_STEP) % cats.length];
   const sprites = Array.from({ length: count }, (_, i) => coat(i, 0).open);
-  setCharacterTemplates(sprites, (palette, repeat, blink) => {
+  setCharacterTemplates(sprites, (palette, repeat, blink, heavy) => {
     const c = coat(palette, repeat);
-    return blink ? c.shut : c.open;
+    const look = heavy ? c.heavy : c;
+    if (!look) return null;
+    return blink ? look.shut : look.open;
   });
 }
 
