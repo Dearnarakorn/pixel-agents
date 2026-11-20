@@ -292,6 +292,15 @@ export const CAT_HEAVY_OFF_PCT = 100;
 export const CAT_HEAVY_STEP_PCT = 5;
 /** localStorage key for that threshold (per browser, like the notification volume). */
 export const CAT_HEAVY_STORAGE_KEY = 'pixel-agents.catHeavyAt';
+/** Seconds of the puff of smoke a cat changes shape behind (slim to heavy and back). */
+export const CAT_POOF_SEC = 0.6;
+/** The puff's colours: its fill and the edge round each little cloud. */
+export const CAT_POOF_FILL = '#f6f2ea';
+export const CAT_POOF_EDGE = '#b9b2a8';
+/** World px above a cat's feet where its puff is centred (about the middle of the cat). */
+export const CAT_POOF_RISE_PX = 10;
+/** The puff sorts this far in front of its cat, so it covers it. */
+export const CAT_POOF_Z_LIFT = 0.05;
 /** A cat seated side-on is drawn this much lower, so it sits down into its floor cushion
  *  rather than on the cushion's top edge. */
 export const CAT_SIDE_SEAT_SINK_PX = 2;

@@ -11,8 +11,9 @@ lifted SIT_LIFT like make_pet_cat_sheets.py's.
 
 Writes webview-ui/src/characters/cats/heavy/<coat>.png and <coat>.blink.png.
 
-Letters: a outline, b fur, c dark fur, d light (inner ear), w cream (chest, muzzle,
-toes), e nose, y eye, p paper, i ink.
+Letters: a outline, b fur, c dark fur, d light (inner ear, face sides), e nose, y eye,
+p paper, i ink. The markings follow the slim cat's (make_pet_cat_sheets.py): a dark
+saddle and crown, a dark tail, stripes down the back, no cream bib.
 """
 import os
 import sys
@@ -29,13 +30,18 @@ W = H = 32
 CELL, FRAMES = 32, 10
 SIT_LIFT = 3
 PAPER, INK = rgba("#fbfaf6"), rgba("#9aa3b5")
-# The cream of the chest, muzzle and toes, per coat (the coats' own "light" is the inner
-# ear's pink on most of them, which made pink bibs).
-BIB = {
-    "ginger": rgba("#ffe0c0"), "tuxedo": rgba("#ece6e2"), "grey": rgba("#e6e8ee"),
-    "calico": rgba("#ffffff"), "blue": rgba("#dde3ec"), "siamese": rgba("#f6efe2"),
-    "tabby": rgba("#eadcc2"), "snow": rgba("#ffffff"),
-}
+
+
+def saddle(c, body, x0, x1, depth=3, breaks=()):
+    """The slim cat's dark saddle: dark fur along the top of the back, `depth` pixels
+    under the outline, from x0 to x1, with fur showing through at `breaks` columns."""
+    for x in range(x0, x1 + 1):
+        ys = sorted(y for (bx, y) in body if bx == x)
+        if not ys:
+            continue
+        for y in range(ys[0] + 1, ys[0] + 1 + (depth - (x in breaks))):
+            if (x, y) in c.sil and c.g[y][x] == "b":
+                c.g[y][x] = "c"
 
 
 def ell(cx, cy, rx, ry):
@@ -138,10 +144,20 @@ def front_face(c, dy=0):
     c.fill(tri([(8, 13 + dy), (9, 8 + dy), (13, 11 + dy)]) | tri([(24, 13 + dy), (23, 8 + dy), (19, 11 + dy)]))
     c.paint({(10, 10 + dy), (10, 11 + dy), (11, 11 + dy), (22, 10 + dy), (22, 11 + dy), (21, 11 + dy)}, "d")
     c.fill(head)
-    c.paint(ell(16, 17.6 + dy, 3.4, 1.9), "w")
-    c.paint(shift({(14, 11), (16, 11), (18, 11), (15, 12), (17, 12)}, 0, dy), "c")
-    c.paint(shift({(9, 15), (10, 15), (22, 15), (23, 15)}, 0, dy), "c")
+    # the slim cat's face: a dark forehead with fur stripes, pale patches at the sides
+    c.paint(shift({(13, 11), (14, 11), (15, 11), (17, 11), (18, 11), (19, 11), (14, 12), (16, 12),
+                   (18, 12)}, 0, dy), "c")
+    c.paint(shift({(9, 13), (9, 14), (10, 14), (23, 13), (23, 14), (22, 14)}, 0, dy), "d")
+    c.paint(shift({(9, 16), (10, 16), (22, 16), (23, 16)}, 0, dy), "c")
     return head
+
+
+def front_markings(c, dy):
+    """The slim cat's front markings on the heavy body: dark shoulders and flanks in
+    stripes, a dark band low on the belly, no cream bib."""
+    c.paint(shift({(9, 21), (10, 21), (22, 21), (23, 21), (8, 23), (9, 23), (23, 23), (24, 23),
+                   (7, 25), (8, 25), (24, 25), (25, 25), (12, 22), (20, 22)}, 0, dy), "c")
+    c.paint({(x, y + dy) for x in range(8, 25) for y in (27, 28) if (x + y) % 3}, "c")
 
 
 def front_face_marks(c, dy=0):
@@ -154,9 +170,7 @@ def front_sit(tail=0, paper=None):
     c = Cat()
     body = ell(16, 24.4, 11, 6.0) | ell(16, 21, 8.4, 5)
     c.fill(body)
-    c.paint(ell(16, 23.2, 4.2, 3.6), "w")
-    c.paint({(8, 23), (8, 24), (24, 23), (24, 24), (9, 21), (9, 22), (23, 21), (23, 22),
-             (7, 26), (8, 26), (24, 26), (25, 26)}, "c")
+    front_markings(c, 0)
     c.fill(FRONT_TAILS[tail] | {(x + 1, y) for x, y in FRONT_TAILS[tail] if y >= 26}, "c")
     head = front_face(c)
     c.outline()
@@ -164,7 +178,7 @@ def front_sit(tail=0, paper=None):
     front_face_marks(c)
     c.dots([(14, 26, "a"), (14, 27, "a"), (14, 28, "a"), (18, 26, "a"), (18, 27, "a"), (18, 28, "a")])
     for x0 in (11, 18):
-        c.dots([(x0, 29, "a"), (x0 + 1, 29, "w"), (x0 + 2, 29, "w"), (x0 + 3, 29, "a"),
+        c.dots([(x0, 29, "a"), (x0 + 1, 29, "b"), (x0 + 2, 29, "b"), (x0 + 3, 29, "a"),
                 (x0, 30, "a"), (x0 + 1, 30, "a"), (x0 + 2, 30, "a"), (x0 + 3, 30, "a")])
     if paper is not None:
         c.paper(13, 25, 7, 5, paper)
@@ -181,8 +195,7 @@ def front_walk(f):
         c.fill(paw_bump(x0, 5, 25, 29 - u), "b")
     body = ell(16, 22.6 + bob, 10.4, 5.4) | ell(16, 19.8 + bob, 8.4, 5)
     c.fill(body)
-    c.paint(ell(16, 21.6 + bob, 3.6, 3.0), "w")
-    c.paint(shift({(8, 21), (8, 22), (24, 21), (24, 22), (7, 24), (25, 24)}, 0, bob), "c")
+    front_markings(c, bob - 1)
     head = front_face(c, bob - 2)
     c.outline()
     c.seam(head, body, 14 + bob)
@@ -206,16 +219,21 @@ def back_head(c, dy=0):
     return head
 
 
+def back_markings(c, body, dy):
+    """The slim cat's back: dark down the spine in stripes, dark shoulders."""
+    c.paint({(x, y) for (x, y) in body if 11 <= x <= 21 and y >= 21 + dy and x % 2 == 0}, "c")
+    c.paint(shift({(9, 21), (10, 21), (22, 21), (23, 21), (8, 24), (24, 24)}, 0, dy), "c")
+
+
 def back_sit(tail=0):
     c = Cat()
     body = ell(16, 24.4, 11, 6.0) | ell(16, 21, 8.4, 5)
     c.fill(body)
-    c.paint({(10, 22), (11, 22), (21, 22), (22, 22), (9, 25), (10, 25), (22, 25), (23, 25),
-             (12, 27), (13, 27), (19, 27), (20, 27)}, "c")
+    back_markings(c, body, 0)
     head = back_head(c)
     c.outline()
     c.seam(head, body, 16)
-    c.part(BACK_TAILS[tail], lambda x, y: "c" if y % 2 else "b")
+    c.part(BACK_TAILS[tail], lambda x, y: "c")
     return c.g
 
 
@@ -227,7 +245,7 @@ def back_walk(f):
         c.fill(paw_bump(x0, 5, 25, 29 - u), "b")
     body = ell(16, 22.6 + bob, 10.4, 5.4) | ell(16, 19.8 + bob, 8.4, 5)
     c.fill(body)
-    c.paint(shift({(10, 20), (11, 20), (21, 20), (22, 20), (8, 23), (9, 23), (23, 23), (24, 23)}, 0, bob), "c")
+    back_markings(c, body, bob - 1)
     head = back_head(c, bob - 2)
     c.outline()
     c.seam(head, body, 14 + bob)
@@ -239,9 +257,7 @@ def back_walk(f):
         pts = [(x, y - 1) for x, y in pts]
     if f == 2:
         pts = [(31 - x, y) for x, y in pts]
-    tail = {(x, y + bob) for x, y in pts}
-    tip = {(pts[-1][0], pts[-1][1] + bob), (pts[-2][0], pts[-2][1] + bob)}
-    c.part(tail, lambda x, y: "c" if (x, y) in tip else "b")
+    c.part({(x, y + bob) for x, y in pts}, lambda x, y: "c")      # dark, like the slim cat's
     return c.g
 
 
@@ -251,8 +267,9 @@ def side_head(c, dy=0):
     c.fill(tri([(16, 13 + dy), (17, 8 + dy), (20, 11 + dy)]) | tri([(20, 12 + dy), (22, 8 + dy), (24, 11 + dy)]))
     c.paint({(18, 11 + dy), (21, 11 + dy), (22, 10 + dy)}, "d")
     c.fill(head)
-    c.paint(ell(24.6, 18.2 + dy, 2.2, 1.6), "w")
-    c.paint(shift({(18, 12), (19, 12), (20, 13), (17, 16), (17, 17)}, 0, dy), "c")
+    # the slim cat's side head: dark over the crown and down the back of the head
+    c.paint(shift({(17, 12), (18, 12), (19, 12), (20, 12), (17, 13), (18, 13), (19, 13), (16, 14),
+                   (17, 14), (16, 15), (16, 16), (17, 17), (21, 13)}, 0, dy), "c")
     return head
 
 
@@ -264,11 +281,9 @@ def tail_wrap(c, out=False):
     """The tail out from under the rump, along the floor in front of the body: thick at
     the root, a pixel at the tip, no bars across it (they read as a ladder)."""
     core = {(x, 28) for x in range(8, 13)} | {(x, 29) for x in range(8, 17)}
-    tip = {(15, 29), (16, 29)}
     if out:  # the tip flicked up
         core |= {(17, 28), (17, 27)}
-        tip = {(17, 28), (17, 27)}
-    c.part(core, lambda x, y: "c" if (x, y) in tip else "b")
+    c.part(core, lambda x, y: "c")                                 # dark, like the slim cat's
 
 
 def side_sit(paw=False, out=False, paper=None):
@@ -276,18 +291,18 @@ def side_sit(paw=False, out=False, paper=None):
     c = Cat()
     body = ell(13.5, 23.9, 9.2, 6.4) | ell(18.5, 21.4, 5.4, 6.2)
     c.fill(body)
-    c.paint(ell(21, 23.5, 2.4, 3.2), "w")
     for x in (8, 11, 14):
-        c.paint({(x, 19 + (x == 14)), (x, 20 + (x == 14)), (x, 21 + (x == 14))}, "c")
+        c.paint({(x, y) for y in range(19, 25)}, "c")             # stripes down from the saddle
+    saddle(c, body, 5, 20, 3, breaks=(9, 12, 15, 18))
     head = side_head(c)
     c.outline()
     c.seam(head, body, 17)
     side_face_marks(c)
     tail_wrap(c, out)
     if paw:
-        c.part({(23, 22), (24, 22)}, lambda x, y: "w" if x == 24 else "b")      # a paw up (typing)
+        c.part({(23, 22), (24, 22)})                                             # a paw up (typing)
     else:
-        c.part({(20, 29), (21, 29)}, lambda *_: "w")                             # a front paw peeking out
+        c.part({(20, 29), (21, 29)})                                             # a front paw peeking out
     if paper is not None:
         c.paper(23, 20, 5, 6, paper)
     return c.g
@@ -303,15 +318,15 @@ def side_walk(f):
     c.fill(paw_bump(hind[0], 5, 24) | paw_bump(front[0], 5, 24), "b")
     body = ell(13.5, 21.1 + dy, 10.2, 4.5) | ell(18, 19.5 + dy, 5.5, 4.8)
     c.fill(body)
-    c.paint(ell(20, 21.9 + dy, 2.6, 1.8), "w")                    # cream chest, kept above the front paw
     for x in (7, 10, 13):
-        c.paint({(x, 18 + dy), (x, 19 + dy), (x, 20 + dy)}, "c")
+        c.paint({(x, y + dy) for y in range(18, 23)}, "c")         # stripes down from the saddle
+    saddle(c, body, 4, 19, 3, breaks=(8, 11, 14, 17))
     head = side_head(c, dy - 1)
     c.outline()
     c.seam(head, body, 16 + dy)
     side_face_marks(c, dy - 1)
     c.part({(4, 20 + dy), (3, 19 + dy), (3, 18 + dy), (3, 17 + dy), (4, 16 + dy)},
-           lambda x, y: "c" if y % 2 else "b")                    # tail up
+           lambda x, y: "c")                                      # tail up, dark like the slim cat's
     return c.g
 
 
@@ -322,17 +337,18 @@ def sleep(b):
     body = ell(13.5, 23.2 - b * 0.5, 10.5, 6.4 + b * 0.5)
     c.fill(body)
     for x in (7, 10, 13, 16):
-        c.paint({(x, 18 - b), (x, 19 - b), (x, 20 - b)}, "c")
+        c.paint({(x, y - b) for y in range(18, 24)}, "c")
+    saddle(c, body, 4, 20, 3, breaks=(8, 11, 14, 17))
     head = ell(22, 22.6, 6, 4.8) | ell(22.4, 24.8, 5.6, 2.8)
     c.fill(tri([(17, 20), (18, 14), (21, 17)]) | tri([(21, 18), (23, 14), (25, 17)]))
     c.paint({(19, 17), (22, 17), (23, 16)}, "d")
     c.fill(head)
-    c.paint(ell(25.6, 25, 2.2, 1.5), "w")
+    c.paint({(18, 19), (19, 19), (20, 19), (21, 19), (18, 20), (19, 20), (17, 21), (17, 22)}, "c")
     c.outline()
     c.seam(head, body, 22)
     # a soft shut eye (a little smile-curve, no brow above it: a dark mark there read as a frown)
     c.dots([(22, 22, "a"), (23, 23, "a"), (24, 23, "a"), (25, 22, "a"), (27, 24, "e")])
-    c.part({(x, 28) for x in range(8, 24)}, lambda x, y: "c" if x >= 22 else "b")
+    c.part({(x, 28) for x in range(8, 24)}, lambda x, y: "c")
     return c.g
 
 
@@ -358,7 +374,7 @@ SIT_SHIFT = {0: 0, 1: 0, 2: 1}
 def render(g, name, blink):
     line, fur, dark, light, nose, eye = (rgba(c) for c in COATS[name])
     col = {"a": line, "b": fur, "c": dark, "d": light, "e": nose, "y": fur if blink else eye,
-           "w": BIB[name], "p": PAPER, "i": INK}
+           "p": PAPER, "i": INK}
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     for y, row in enumerate(g):
         for x, ch in enumerate(row):

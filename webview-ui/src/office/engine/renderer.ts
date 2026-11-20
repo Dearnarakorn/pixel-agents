@@ -17,6 +17,10 @@ import {
   CARPET_DEFAULT_ACCENT_COLOR,
   CARPET_DEFAULT_COLOR,
   CAT_FLOOR_SIT_OFFSET_PX,
+  CAT_POOF_EDGE,
+  CAT_POOF_FILL,
+  CAT_POOF_RISE_PX,
+  CAT_POOF_Z_LIFT,
   CHARACTER_SITTING_OFFSET_PX,
   CHARACTER_Z_SORT_OFFSET,
   DELETE_BUTTON_BG,
@@ -68,7 +72,7 @@ import type {
 import { CharacterState, TILE_SIZE, TileType } from '../types.js';
 import { getWallInstances, hasWallSprites, wallColorToHex } from '../wallTiles.js';
 import { catSideSeatSink, catSideSitZ, catSitsOnFloor } from './catBehaviour.js';
-import { isCatHeavy } from './catHeavy.js';
+import { type CatPuff, catPoofProgress, catPoofPuffs } from './catHeavy.js';
 import { getCharacterSprite } from './characters.js';
 import { renderMatrixEffect } from './matrixEffect.js';
 import { getPetSpriteData } from './petEntity.js';
@@ -395,7 +399,8 @@ export function renderScene(
 
   // Characters
   for (const ch of characters) {
-    const sprites = getCharacterSprites(ch.palette, ch.repeat, ch.blinkShut > 0, isCatHeavy(ch));
+    const heavy = !!ch.catHeavyShown;
+    const sprites = getCharacterSprites(ch.palette, ch.repeat, ch.blinkShut > 0, heavy);
     const spriteData = getCharacterSprite(ch, sprites);
     const cached = getCachedSprite(spriteData, zoom);
     // Sitting offset: shift character down when seated so they visually sit in the chair
@@ -477,6 +482,18 @@ export function renderScene(
         c.restore();
       },
     });
+
+    // A cat changing shape (slim ↔ heavy) does it behind a puff of smoke, drawn over it.
+    const poof = catPoofProgress(ch);
+    if (poof !== null) {
+      const midX = offsetX + ch.x * zoom;
+      const midY = offsetY + (ch.y + sittingOffset - CAT_POOF_RISE_PX) * zoom;
+      const puffs = catPoofPuffs(poof);
+      drawables.push({
+        zY: charZY + CAT_POOF_Z_LIFT,
+        draw: (c) => drawCatPoof(c, puffs, midX, midY, zoom),
+      });
+    }
   }
 
   // ── Pets ──────────────────────────────────────────────
@@ -511,6 +528,36 @@ export function renderScene(
 }
 
 // ── Seat indicators ─────────────────────────────────────────────
+
+/**
+ * A cat's puff of smoke (catHeavy.ts catPoofPuffs) as pixel art: every little cloud's
+ * edge first, then every fill, so overlapping clouds merge into one outlined cloud.
+ */
+function drawCatPoof(
+  c: CanvasRenderingContext2D,
+  puffs: readonly CatPuff[],
+  midX: number,
+  midY: number,
+  zoom: number,
+): void {
+  const disc = (p: CatPuff, r: number) => {
+    for (let y = -r; y <= r; y++) {
+      const w = Math.floor(Math.sqrt(r * r - y * y + r * 0.8));
+      c.fillRect(
+        Math.round(midX + (p.dx - w) * zoom),
+        Math.round(midY + (p.dy + y) * zoom),
+        (2 * w + 1) * zoom,
+        zoom,
+      );
+    }
+  };
+  c.save();
+  c.fillStyle = CAT_POOF_EDGE;
+  for (const p of puffs) disc(p, p.r);
+  c.fillStyle = CAT_POOF_FILL;
+  for (const p of puffs) if (p.r > 1) disc(p, p.r - 1);
+  c.restore();
+}
 
 function renderSeatIndicators(
   ctx: CanvasRenderingContext2D,

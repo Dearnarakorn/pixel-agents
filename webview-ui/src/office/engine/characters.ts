@@ -33,6 +33,7 @@ import {
   isCatBehaviour,
   pickCatSpot,
 } from './catBehaviour.js';
+import { tickCatShape } from './catHeavy.js';
 
 /** Whether a tool should show the reading animation (vs typing). Taxonomy comes
  *  from the active HookProvider via the `providerCapabilities` message. */
@@ -126,6 +127,7 @@ export function updateCharacter(
   cat: CatContext | null = null,
 ): void {
   ch.frameTimer += dt;
+  tickCatShape(ch, dt);
   // Work, or the Office theme, ends any cat errand at once.
   if ((ch.isActive || !cat) && (ch.catSitSec || ch.catSpot || (ch.speedMul ?? 1) !== 1)) {
     clearCatErrand(ch);

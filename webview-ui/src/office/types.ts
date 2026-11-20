@@ -292,6 +292,10 @@ export interface Character extends Blinker {
   /** True once the server reported the context: from then on 0 is a real
    *  reading (a cleared session, a full gauge), not "no turn yet". */
   contextReported?: boolean;
+  /** Cat theme: whether the cat is drawn heavy now (catHeavy.ts `tickCatShape`; it follows
+   *  the context, changing behind a puff of smoke), and the seconds left of that puff. */
+  catHeavyShown?: boolean;
+  catPoofSec?: number;
 }
 
 export const PetState = { IDLE: 'idle', WALK: 'walk', FOLLOW: 'follow' } as const;

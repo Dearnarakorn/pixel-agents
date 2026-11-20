@@ -2,13 +2,21 @@ import assert from 'node:assert/strict';
 
 import { afterEach, test } from 'vitest';
 
-import { CAT_HEAVY_DEFAULT_PCT, CAT_HEAVY_MIN_PCT, CAT_HEAVY_OFF_PCT } from '../src/constants.js';
+import {
+  CAT_HEAVY_DEFAULT_PCT,
+  CAT_HEAVY_MIN_PCT,
+  CAT_HEAVY_OFF_PCT,
+  CAT_POOF_SEC,
+} from '../src/constants.js';
 import { setCatBehaviour } from '../src/office/engine/catBehaviour.js';
 import {
+  catPoofProgress,
+  catPoofPuffs,
   clampCatHeavyPct,
   getCatHeavyThresholdPct,
   isCatHeavy,
   setCatHeavyThresholdPct,
+  tickCatShape,
 } from '../src/office/engine/catHeavy.js';
 import { getCharacterSprites, setCharacterTemplates } from '../src/office/sprites/spriteData.js';
 import { Direction } from '../src/office/types.js';
@@ -48,6 +56,37 @@ test('a stored threshold is clamped to the slider and rounded; junk is the defau
   assert.equal(clampCatHeavyPct(Number.NaN), CAT_HEAVY_DEFAULT_PCT);
   setCatHeavyThresholdPct(55);
   assert.equal(getCatHeavyThresholdPct(), 55);
+});
+
+test('the shape changes behind a puff: halfway through, never on the first look', () => {
+  setCatBehaviour(true);
+  setCatHeavyThresholdPct(40);
+  const ch: Parameters<typeof tickCatShape>[0] = { ...used(0.5) };
+  tickCatShape(ch, 0.016); // first look: heavy at once, no puff
+  assert.equal(ch.catHeavyShown, true);
+  assert.equal(catPoofProgress(ch), null);
+
+  ch.contextTokens = 100; // compacted: slim again, behind a puff
+  tickCatShape(ch, 0.016);
+  assert.equal(ch.catPoofSec, CAT_POOF_SEC);
+  assert.equal(ch.catHeavyShown, true);
+  tickCatShape(ch, CAT_POOF_SEC * 0.4);
+  assert.equal(ch.catHeavyShown, true); // still before halfway
+  tickCatShape(ch, CAT_POOF_SEC * 0.2);
+  assert.equal(ch.catHeavyShown, false); // swapped at halfway
+  tickCatShape(ch, CAT_POOF_SEC);
+  assert.equal(catPoofProgress(ch), null);
+
+  setCatBehaviour(false); // the Office theme: no shape at all
+  tickCatShape(ch, 0.016);
+  assert.equal(ch.catHeavyShown, undefined);
+});
+
+test('the puff covers the cat halfway and is gone at the end', () => {
+  const mid = catPoofPuffs(0.5);
+  assert.ok(Math.max(...mid.map((p) => p.r)) >= 6);
+  assert.equal(catPoofPuffs(1).length, 0);
+  for (const p of catPoofPuffs(0.25)) assert.ok(Number.isInteger(p.dx) && Number.isInteger(p.r));
 });
 
 test("heavy picks the coat's heavy sheet (shut-eyed too); a coat without one stays slim", () => {
