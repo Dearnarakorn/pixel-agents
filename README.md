@@ -14,7 +14,7 @@ A fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by Pab
 
 | At work | Asleep in the bedroom |
 | --- | --- |
-| ![Two cats at a desk, one laptop playing a game](docs/cat/work.png) | ![Three cats asleep in their beds](docs/cat/sleep.png) |
+| ![Two cats at a desk, one laptop playing a game](docs/cat/work.png) | ![Cats asleep in their beds in the bedroom](docs/cat/sleep.png) |
 
 ### Install
 
