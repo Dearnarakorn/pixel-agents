@@ -653,6 +653,8 @@ export function useExtensionMessages(
         if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
         if (typeof msg.zone === 'string') os.setAgentZone(id, msg.zone);
         if (status === 'active') {
+          // A turn's start says who prompted it: another session (mail) or the user ('').
+          if (typeof msg.messageFrom === 'string') os.receiveMail(id, msg.messageFrom);
           os.wakeAgent(id);
           os.regroupAgent(id);
           os.errored.delete(id);
@@ -663,6 +665,7 @@ export function useExtensionMessages(
           // whether it failed.
           const since = typeof msg.idleSince === 'number' ? msg.idleSince : os.idleSince.get(id);
           os.idleSince.set(id, since ?? Date.now());
+          os.endMailTurn(id);
           if (msg.error === true) os.errored.add(id);
           // A resend (no idleSince) carries no count: keep the one known.
           if (typeof msg.background === 'number' && msg.background > 0) {

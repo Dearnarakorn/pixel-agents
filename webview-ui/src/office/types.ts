@@ -296,6 +296,14 @@ export interface Character extends Blinker {
    *  isCatHeavy, changing behind a puff of smoke), and the seconds left of that puff. */
   catHeavyShown?: boolean;
   catPoofSec?: number;
+  /** The session whose message started this agent's turn (mail.ts), shown on its
+   *  label until the turn ends; undefined when the user prompted it. */
+  mailFrom?: string;
+  /** Mail in flight to this agent: seconds left, and where it set off from (world
+   *  px; the sender's head, or high above this agent when the sender isn't here). */
+  mailFlightSec?: number;
+  mailFromX?: number;
+  mailFromY?: number;
 }
 
 export const PetState = { IDLE: 'idle', WALK: 'walk', FOLLOW: 'follow' } as const;

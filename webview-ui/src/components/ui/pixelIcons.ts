@@ -333,6 +333,17 @@ export const ICONS = {
     '.....##.',
     '......##',
   ],
+  // An envelope, its flap folded down to a point: work one session sent another.
+  mail: [
+    '........',
+    '########',
+    '##....##',
+    '#.#..#.#',
+    '#..##..#',
+    '#......#',
+    '########',
+    '........',
+  ],
 } as const satisfies Record<string, readonly string[]>;
 
 export type PixelIconName = keyof typeof ICONS;

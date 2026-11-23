@@ -349,3 +349,64 @@ describe('transcriptParser: teammate spawn results (new-harness implicit teams)'
     expect(agent.isTeamLead).toBeUndefined();
   });
 });
+
+describe('transcriptParser: messages from other sessions', () => {
+  let agents: AgentStateStore;
+  let messages: Array<Record<string, unknown>>;
+  const waitingTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  const permissionTimers = new Map<number, ReturnType<typeof setTimeout>>();
+
+  beforeEach(() => {
+    setHookProvider(claudeProvider);
+    agents = new AgentStateStore();
+    agents.set(1, createTestAgent());
+    messages = [];
+    agents.on('broadcast', (msg) => {
+      messages.push(msg as Record<string, unknown>);
+    });
+    vi.useFakeTimers();
+    return () => vi.useRealTimers();
+  });
+
+  const prompt = (content: unknown) =>
+    JSON.stringify({ type: 'user', isMeta: true, message: { role: 'user', content } });
+  const started = () => messages.filter((m) => m.type === 'agentStatus' && m.status === 'active');
+
+  it('names the sending session on the turn it starts', () => {
+    processTranscriptLine(
+      1,
+      prompt(
+        '<cross-session-message from="local_1234abcd-0000" from-name="Boss">\nplease check the build\n</cross-session-message>',
+      ),
+      agents,
+      waitingTimers,
+      permissionTimers,
+    );
+    expect(started()).toEqual([{ type: 'agentStatus', id: 1, status: 'active', messageFrom: 'Boss' }]);
+  });
+
+  it('reads the tag inside a text block too', () => {
+    processTranscriptLine(
+      1,
+      prompt([{ type: 'text', text: '<cross-session-message from-name="Engineer" from="local_x">done</cross-session-message>' }]),
+      agents,
+      waitingTimers,
+      permissionTimers,
+    );
+    expect(started()[0]?.messageFrom).toBe('Engineer');
+  });
+
+  it("says '' for the user's own prompt", () => {
+    processTranscriptLine(1, prompt('fix the label'), agents, waitingTimers, permissionTimers);
+    expect(started()[0]?.messageFrom).toBe('');
+  });
+
+  it('messageSender ignores a tag that does not open the prompt', () => {
+    expect(claudeProvider.messageSender?.('see <cross-session-message from-name="Boss">')).toBe(
+      undefined,
+    );
+    expect(claudeProvider.messageSender?.('<cross-session-message from="local_x">hi')).toBe(
+      undefined,
+    );
+  });
+});

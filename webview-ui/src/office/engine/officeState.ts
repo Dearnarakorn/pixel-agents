@@ -55,6 +55,7 @@ import {
   updateCharacter,
   updateHelper,
 } from './characters.js';
+import { endMailTurn, findMailSender, receiveMail } from './mail.js';
 import { advanceMatrixEffect, startMatrixEffect } from './matrixEffectState.js';
 import { createPet, updatePet } from './petEntity.js';
 import { anchorTile, closestFreeSeat } from './seatPlacement.js';
@@ -794,6 +795,21 @@ export class OfficeState {
   setAgentTitle(agentId: number, title: string | undefined): void {
     const ch = this.characters.get(agentId);
     if (ch) ch.title = title;
+  }
+
+  /** A turn started from `from`'s message ('' = the user's prompt): fly mail from
+   *  the character titled `from` (from above when none is here) and label the agent. */
+  receiveMail(agentId: number, from: string): void {
+    const ch = this.characters.get(agentId);
+    if (!ch) return;
+    const sender = from ? findMailSender(this.characters.values(), from, agentId) : null;
+    receiveMail(ch, from, sender);
+  }
+
+  /** The agent's turn ended: its "from" label goes. */
+  endMailTurn(agentId: number): void {
+    const ch = this.characters.get(agentId);
+    if (ch) endMailTurn(ch);
   }
 
   /**

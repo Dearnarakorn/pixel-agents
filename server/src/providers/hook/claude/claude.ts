@@ -322,6 +322,19 @@ export function contextWindowForModel(model: string | undefined): number | undef
     : CLAUDE_LARGE_CONTEXT_WINDOW;
 }
 
+/** A message from another session (the desktop app's SendMessage): the prompt
+ *  opens with this tag, naming the sender's session in `from-name`. */
+const CROSS_SESSION_TAG = /^\s*<cross-session-message\b([^>]*)>/;
+const FROM_NAME_ATTR = /\bfrom-name="([^"]*)"/;
+
+/** The sending session's name when the prompt is a message from another session. */
+export function messageSender(promptText: string): string | undefined {
+  const tag = CROSS_SESSION_TAG.exec(promptText);
+  if (!tag) return undefined;
+  const name = FROM_NAME_ATTR.exec(tag[1])?.[1]?.trim();
+  return name || undefined;
+}
+
 // ── The provider ──
 
 export const claudeProvider: HookProvider = {
@@ -350,6 +363,7 @@ export const claudeProvider: HookProvider = {
   buildLaunchCommand,
   isInheritedSessionEnv: isInheritedClaudeSessionEnv,
   conversationTitle,
+  messageSender,
   sessionLink,
   lastActivityAt,
   backgroundTasksRunning,

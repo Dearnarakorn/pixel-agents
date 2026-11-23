@@ -62,7 +62,15 @@ function beginTurn(
   agent.turnErrored = false;
   agent.isWaiting = false;
   agent.turnActive = true;
-  agents.broadcast({ type: 'agentStatus', id: agentId, status: 'active' });
+  // Who sent this turn's prompt when another session did ('' = the user): the
+  // office flies mail between them and labels the receiver until the turn ends.
+  const messageFrom = hookProvider?.messageSender ? (hookProvider.messageSender(text) ?? '') : undefined;
+  agents.broadcast({
+    type: 'agentStatus',
+    id: agentId,
+    status: 'active',
+    ...(messageFrom !== undefined ? { messageFrom } : {}),
+  });
   if (!agent.hookDelivered) {
     startWaitingTimer(agentId, THINKING_SILENCE_TIMEOUT_MS, agents, waitingTimers);
   }

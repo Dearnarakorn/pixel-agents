@@ -376,6 +376,13 @@ components:
           description: >-
             With status "waiting": background tasks the session started and is
             still waiting on. The office labels it "Waiting · N jobs", not "Done".
+        messageFrom:
+          type: string
+          description: >-
+            With status "active" at the start of a turn: the name of the session
+            whose message started it ('' = the user's own prompt). The office
+            flies mail from that session's character and labels the agent
+            "from <name>" until the turn ends. Absent on other "active" notices.
 
     AgentActivityStatus:
       description: Activity state of an agent.

@@ -214,6 +214,11 @@ export interface HookProvider {
    *  recent conversations; undefined = this provider names no conversations
    *  (and is never asked to resume one). */
   conversationTitle?(transcriptPath: string): string | undefined;
+  /** The name of the session that sent this prompt, when the prompt is a
+   *  message one session of this CLI sent another (not something the user
+   *  typed), else undefined. The office shows it as mail between characters.
+   *  Undefined = this CLI has no session-to-session messages. */
+  messageSender?(promptText: string): string | undefined;
   /** A link (a custom URL scheme of the CLI's own app) that brings the session
    *  to the front there, or undefined when this id cannot be linked. The office
    *  opens it when an agent without a terminal is clicked a second time.

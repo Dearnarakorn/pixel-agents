@@ -10,6 +10,7 @@ import {
   CONTEXT_GAUGE_GAP_PX,
   CONTEXT_GAUGE_HEIGHT_PX,
   CONTEXT_GAUGE_WIDTH_PX,
+  MAIL_LABEL_COLOR,
   OVERLAY_BUBBLE_Z_INDEX,
   OVERLAY_LABEL_SELECTED_Z_INDEX,
   OVERLAY_LABEL_Z_INDEX,
@@ -367,6 +368,16 @@ export function ToolOverlay({
                       }}
                     >
                       {teamRoleLabel}
+                    </span>
+                  )}
+                  {!isSub && ch.mailFrom && (
+                    <span
+                      className="flex items-center gap-4 overflow-hidden text-ellipsis leading-none"
+                      style={{ fontSize: '18px', color: MAIL_LABEL_COLOR }}
+                      data-testid="mail-from"
+                    >
+                      <PixelIcon name="mail" scale={1} />
+                      {`from ${ch.mailFrom}`}
                     </span>
                   )}
                   <span

@@ -299,6 +299,20 @@ export const CAT_POOF_EDGE = '#b9b2a8';
 export const CAT_POOF_RISE_PX = 15;
 /** The puff sorts this far in front of its cat, so it covers it. */
 export const CAT_POOF_Z_LIFT = 0.05;
+
+// ── Mail between sessions (office/engine/mail.ts) ─────────────
+/** Seconds an envelope takes from the sender to the receiver. */
+export const MAIL_FLIGHT_SEC = 1.4;
+/** How high the envelope's path arcs above the straight line, world px. */
+export const MAIL_ARC_PX = 18;
+/** Where mail sets off when the sender isn't in the office: this far above the receiver. */
+export const MAIL_DROP_PX = 72;
+/** Envelopes fly at head height: this far above a character's anchor. */
+export const MAIL_HEAD_RISE_PX = 22;
+export const MAIL_PAPER = '#f8f4e8';
+export const MAIL_EDGE = '#8a5a3a';
+/** The "from <name>" line on a receiver's label. */
+export const MAIL_LABEL_COLOR = '#f0c070';
 /** A cat seated side-on is drawn this much lower, so it sits down into its floor cushion
  *  rather than on the cushion's top edge. */
 export const CAT_SIDE_SEAT_SINK_PX = 2;

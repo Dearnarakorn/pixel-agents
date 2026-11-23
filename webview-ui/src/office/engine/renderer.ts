@@ -36,6 +36,8 @@ import {
   GRID_LINE_COLOR,
   HEADLESS_CHARACTER_ALPHA,
   HOVERED_OUTLINE_ALPHA,
+  MAIL_EDGE,
+  MAIL_PAPER,
   OUTLINE_Z_SORT_OFFSET,
   ROTATE_BUTTON_BG,
   ROTATE_BUTTON_HOVER_BG,
@@ -73,6 +75,7 @@ import { CharacterState, TILE_SIZE, TileType } from '../types.js';
 import { getWallInstances, hasWallSprites, wallColorToHex } from '../wallTiles.js';
 import { catSideSeatSink, catSideSitZ, catSitsOnFloor } from './catBehaviour.js';
 import { type CatPuff, catPoofProgress, catPoofPuffs } from './catHeavy.js';
+import { MAIL_ENVELOPE, mailPoint } from './mail.js';
 import { getCharacterSprite } from './characters.js';
 import { renderMatrixEffect } from './matrixEffect.js';
 import { getPetSpriteData } from './petEntity.js';
@@ -494,6 +497,14 @@ export function renderScene(
         draw: (c) => drawCatPoof(c, puffs, midX, midY, zoom),
       });
     }
+
+    // Mail from another session on its way to this agent: over everything.
+    const mail = mailPoint(ch);
+    if (mail) {
+      const mx = offsetX + mail.x * zoom;
+      const my = offsetY + mail.y * zoom;
+      drawables.push({ zY: Number.MAX_SAFE_INTEGER, draw: (c) => drawEnvelope(c, mx, my, zoom) });
+    }
   }
 
   // ── Pets ──────────────────────────────────────────────
@@ -556,6 +567,23 @@ function drawCatPoof(
   for (const p of puffs) disc(p, p.r);
   c.fillStyle = CAT_POOF_FILL;
   for (const p of puffs) if (p.r > 1) disc(p, p.r - 1);
+  c.restore();
+}
+
+/** An envelope (mail.ts MAIL_ENVELOPE) centred on (midX, midY), whole sprite pixels. */
+function drawEnvelope(c: CanvasRenderingContext2D, midX: number, midY: number, zoom: number): void {
+  const rows = MAIL_ENVELOPE;
+  const left = Math.round(midX - ((rows[0].length - 1) / 2) * zoom);
+  const top = Math.round(midY - ((rows.length - 1) / 2) * zoom);
+  c.save();
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      const p = row[x];
+      if (p !== '#' && p !== 'o') continue;
+      c.fillStyle = p === '#' ? MAIL_EDGE : MAIL_PAPER;
+      c.fillRect(left + x * zoom, top + y * zoom, zoom, zoom);
+    }
+  });
   c.restore();
 }
 
