@@ -2,7 +2,7 @@
   "name": "pixel-cat-agents",
   "displayName": "Pixel Cat Agents",
   "description": "A pixel art cat office where your Claude Code agents live as cats (a fork of Pixel Agents)",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "pablodelucca",
   "repository": {
     "type": "git",

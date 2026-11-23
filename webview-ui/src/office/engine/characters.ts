@@ -33,7 +33,7 @@ import {
   isCatBehaviour,
   pickCatSpot,
 } from './catBehaviour.js';
-import { tickCatShape } from './catHeavy.js';
+import { catHeavyPace, tickCatShape } from './catHeavy.js';
 
 /** Whether a tool should show the reading animation (vs typing). Taxonomy comes
  *  from the active HookProvider via the `providerCapabilities` message. */
@@ -277,7 +277,7 @@ export function updateCharacter(
 
     case CharacterState.WALK: {
       // Walk animation (quicker steps on a dash, slower for a strolling cat)
-      const pace = (ch.speedMul ?? 1) * (cat ? CAT_WALK_SPEED_MUL : 1);
+      const pace = (ch.speedMul ?? 1) * (cat ? CAT_WALK_SPEED_MUL * catHeavyPace(ch) : 1);
       const frameSec = WALK_FRAME_DURATION_SEC / pace;
       if (ch.frameTimer >= frameSec) {
         ch.frameTimer -= frameSec;

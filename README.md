@@ -8,7 +8,7 @@ A fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by Pab
 - **A cat office.** It has cat furniture, cat houses, a climbing wall, toys on the floor, paw-print carpets, and laptops that play little games while their cat works.
 - **Cats behave like cats when idle.** They go and sit by things, nap on the floor, sit and swish their tails, and get the zoomies.
 - **A bedroom.** An agent idle for a while shows "Zzz" and walks to a bed to sleep. It wakes when it starts working again.
-- **The boss is a fat cat.** Name a session "Boss" (`/rename Boss` in Claude Code) and its cat turns into a big round fat cat, in a puff of smoke. Settings → Fat Cat sets which session names (or zones) get the fat cat; leave it empty for none.
+- **The boss is a fat cat.** Name a session "Boss" (`/rename Boss` in Claude Code) and its cat turns into a big round fat cat, in a puff of smoke, and waddles a little slower. Settings → Fat Cat sets which session names (or zones) get the fat cat; leave it empty for none.
 - **A ready-made office.** New users get a work room, a lounge, a cafe and a bedroom. You can change any of it in the layout editor, and Settings switches back to the plain office theme.
 
 ![The 8 coats walking, typing, reading and sleeping](docs/cat/coats.png)
@@ -17,12 +17,14 @@ A fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by Pab
 | --- | --- |
 | ![Two cats at a desk, one laptop playing a game](docs/cat/work.png) | ![Cats asleep in their beds in the bedroom](docs/cat/sleep.png) |
 
+![The calico cat slim (top) and as the fat boss cat (bottom): walking, sitting, typing and asleep](docs/cat/fatcat.png)
+
 ### Install
 
 You need [Node.js](https://nodejs.org) 22 or newer. Download `pixel-cat-agents-<version>.tgz` from the [latest release](https://github.com/Dearnarakorn/pixel-agents/releases/latest), then run:
 
 ```bash
-npm install --global pixel-cat-agents-0.1.0.tgz
+npm install --global pixel-cat-agents-0.1.1.tgz
 pixel-cat-agents
 ```
 

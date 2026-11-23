@@ -6,7 +6,11 @@
  * title or its zone, "Boss" by default; empty means none. DOM-free.
  */
 
-import { CAT_HEAVY_DEFAULT_NAMES, CAT_POOF_SEC } from '../../constants.js';
+import {
+  CAT_HEAVY_DEFAULT_NAMES,
+  CAT_HEAVY_WALK_SPEED_MUL,
+  CAT_POOF_SEC,
+} from '../../constants.js';
 import type { Character } from '../types.js';
 import { isCatBehaviour } from './catBehaviour.js';
 
@@ -63,6 +67,11 @@ export function tickCatShape(
 export function catPoofProgress(ch: Pick<Character, 'catPoofSec'>): number | null {
   const left = ch.catPoofSec ?? 0;
   return left > 0 ? 1 - left / CAT_POOF_SEC : null;
+}
+
+/** A cat's walk pace on top of the cat stroll: a heavy cat waddles slower (1 otherwise). */
+export function catHeavyPace(ch: Pick<Character, 'catHeavyShown'>): number {
+  return ch.catHeavyShown ? CAT_HEAVY_WALK_SPEED_MUL : 1;
 }
 
 /** One little cloud of a puff: offset from the cat's middle and radius, in world pixels. */

@@ -2,9 +2,14 @@ import assert from 'node:assert/strict';
 
 import { afterEach, test } from 'vitest';
 
-import { CAT_HEAVY_DEFAULT_NAMES, CAT_POOF_SEC } from '../src/constants.js';
+import {
+  CAT_HEAVY_DEFAULT_NAMES,
+  CAT_HEAVY_WALK_SPEED_MUL,
+  CAT_POOF_SEC,
+} from '../src/constants.js';
 import { setCatBehaviour } from '../src/office/engine/catBehaviour.js';
 import {
+  catHeavyPace,
   catPoofProgress,
   catPoofPuffs,
   getCatHeavyNames,
@@ -22,6 +27,13 @@ const sheet = (tag: string) => ({ down: row(10, tag), up: row(10, tag), right: r
 afterEach(() => {
   setCatBehaviour(false);
   setCatHeavyNames(CAT_HEAVY_DEFAULT_NAMES);
+});
+
+test('a heavy cat waddles slower than a slim one', () => {
+  assert.equal(catHeavyPace({}), 1);
+  assert.equal(catHeavyPace({ catHeavyShown: false }), 1);
+  assert.equal(catHeavyPace({ catHeavyShown: true }), CAT_HEAVY_WALK_SPEED_MUL);
+  assert.ok(CAT_HEAVY_WALK_SPEED_MUL > 0 && CAT_HEAVY_WALK_SPEED_MUL < 1);
 });
 
 test('the Boss is the fat cat (by title or zone); everyone else, and people, are not', () => {

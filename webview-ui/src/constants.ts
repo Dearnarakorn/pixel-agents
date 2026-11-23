@@ -277,6 +277,8 @@ export const CAT_SIT_SEC: readonly [number, number] = [4, 9];
 export const CAT_ZOOM_SPEED_MUL = 2.6;
 /** A cat strolls slower than a person walks (and steps slower to match). */
 export const CAT_WALK_SPEED_MUL = 0.55;
+/** A heavy cat (the boss, catHeavy.ts) waddles a little slower again (on top of CAT_WALK_SPEED_MUL). */
+export const CAT_HEAVY_WALK_SPEED_MUL = 0.75;
 /** Seconds per breath frame of a sleeping cat (a nap, or curled up in bed). */
 export const CAT_SLEEP_BREATH_SEC = 1.2;
 /** A spot is picked among this many nearest to the cat (so it goes to things in its room). */
