@@ -8,6 +8,7 @@ A fork of [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by Pab
 - **A cat office.** It has cat furniture, cat houses, a climbing wall, toys on the floor, paw-print carpets, and laptops that play little games while their cat works.
 - **Cats behave like cats when idle.** They go and sit by things, nap on the floor, sit and swish their tails, and get the zoomies.
 - **A bedroom.** An agent idle for a while shows "Zzz" and walks to a bed to sleep. It wakes when it starts working again.
+- **The boss is a fat cat.** Name a session "Boss" (`/rename Boss` in Claude Code) and its cat turns into a big round fat cat, in a puff of smoke. Settings → Fat Cat sets which session names (or zones) get the fat cat; leave it empty for none.
 - **A ready-made office.** New users get a work room, a lounge, a cafe and a bedroom. You can change any of it in the layout editor, and Settings switches back to the plain office theme.
 
 ![The 8 coats walking, typing, reading and sleeping](docs/cat/coats.png)

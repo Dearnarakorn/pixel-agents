@@ -107,7 +107,7 @@ export function setOfficeCats(sheets: readonly OfficeCatSheets[] | null): void {
 /**
  * Cat Mode: every palette (profiles, then external sprites) wears a coat by
  * its index, a repeat steps to another coat, a blink shuts the cat's eyes, a
- * full context makes it the coat's heavy cat (null when the coat has none).
+ * boss (catHeavy.ts) wears the coat's heavy cat (null when the coat has none).
  */
 function syncCats(cats: readonly OfficeCatSheets[], count: number): void {
   const coat = (palette: number, repeat: number) =>

@@ -283,15 +283,11 @@ export const CAT_SLEEP_BREATH_SEC = 1.2;
 export const CAT_SPOT_NEAREST = 6;
 /** A cat sitting on the floor is drawn this much lower: its sitting frames are lifted for chairs. */
 export const CAT_FLOOR_SIT_OFFSET_PX = 3;
-/** Heavy cats (catHeavy.ts): a cat turns heavy once this share (%) of its context is used.
- *  Context windows are 1M tokens now, so 60% (600k) was rarely reached. */
-export const CAT_HEAVY_DEFAULT_PCT = 40;
-/** The Settings slider's range; its top end turns heavy cats off. */
-export const CAT_HEAVY_MIN_PCT = 20;
-export const CAT_HEAVY_OFF_PCT = 100;
-export const CAT_HEAVY_STEP_PCT = 5;
-/** localStorage key for that threshold (per browser, like the notification volume). */
-export const CAT_HEAVY_STORAGE_KEY = 'pixel-agents.catHeavyAt';
+/** The heavy cat (catHeavy.ts): the agents drawn as fat cats, by conversation title or zone
+ *  (comma separated; empty = none). The boss of the office is the fat cat. */
+export const CAT_HEAVY_DEFAULT_NAMES = 'Boss';
+/** localStorage key for those names (per browser, like the notification volume). */
+export const CAT_HEAVY_STORAGE_KEY = 'pixel-agents.catHeavyFor';
 /** Seconds of the puff of smoke a cat changes shape behind (slim to heavy and back). */
 export const CAT_POOF_SEC = 0.6;
 /** The puff's colours: its fill and the edge round each little cloud. */

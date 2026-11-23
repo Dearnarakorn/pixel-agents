@@ -1,35 +1,35 @@
 /**
- * Heavy cats (Cat theme): an agent's cat is drawn heavy -- its coat's heavy
- * sheet, characters/cats/heavy/ -- once its context fills past a threshold, and
- * slim again when the context drops (a compaction, a /clear). The threshold is
- * a per-browser setting (Settings, kept by characters/catHeavySetting.ts);
- * CAT_HEAVY_OFF_PCT turns it off. Sub-agents report no context, so they stay slim.
- * DOM-free.
+ * The heavy cat (Cat theme): the boss of the office is a fat cat -- its coat's
+ * heavy sheet, characters/cats/heavy/ -- and everyone else a slim one. Which
+ * agents are heavy is a per-browser setting (Settings, kept by
+ * characters/catHeavySetting.ts): names matched against an agent's conversation
+ * title or its zone, "Boss" by default; empty means none. DOM-free.
  */
 
-import {
-  CAT_HEAVY_DEFAULT_PCT,
-  CAT_HEAVY_MIN_PCT,
-  CAT_HEAVY_OFF_PCT,
-  CAT_POOF_SEC,
-} from '../../constants.js';
+import { CAT_HEAVY_DEFAULT_NAMES, CAT_POOF_SEC } from '../../constants.js';
 import type { Character } from '../types.js';
 import { isCatBehaviour } from './catBehaviour.js';
 
-let thresholdPct = CAT_HEAVY_DEFAULT_PCT;
-
-/** A stored or typed value as a threshold: whole steps inside the slider's range. */
-export function clampCatHeavyPct(pct: number): number {
-  if (!Number.isFinite(pct)) return CAT_HEAVY_DEFAULT_PCT;
-  return Math.min(CAT_HEAVY_OFF_PCT, Math.max(CAT_HEAVY_MIN_PCT, Math.round(pct)));
+/** The names as typed: comma separated, case and spaces round each name ignored. */
+function parseNames(text: string): Set<string> {
+  return new Set(
+    text
+      .split(',')
+      .map((n) => n.trim().toLowerCase())
+      .filter(Boolean),
+  );
 }
 
-export function setCatHeavyThresholdPct(pct: number): void {
-  thresholdPct = clampCatHeavyPct(pct);
+let namesText = CAT_HEAVY_DEFAULT_NAMES;
+let names = parseNames(namesText);
+
+export function setCatHeavyNames(text: string): void {
+  namesText = text;
+  names = parseNames(text);
 }
 
-export function getCatHeavyThresholdPct(): number {
-  return thresholdPct;
+export function getCatHeavyNames(): string {
+  return namesText;
 }
 
 /**
@@ -39,7 +39,7 @@ export function getCatHeavyThresholdPct(): number {
  * once with no puff, so loading the office or turning the theme on doesn't puff every cat.
  */
 export function tickCatShape(
-  ch: Pick<Character, 'contextTokens' | 'maxContextTokens' | 'catHeavyShown' | 'catPoofSec'>,
+  ch: Pick<Character, 'title' | 'zone' | 'catHeavyShown' | 'catPoofSec'>,
   dt: number,
 ): void {
   const want = isCatHeavy(ch);
@@ -98,11 +98,11 @@ export function catPoofPuffs(t: number): CatPuff[] {
   return puffs.filter((p) => p.r > 0);
 }
 
-/** Whether a character is drawn as a heavy cat: Cat theme on, heavy cats not off, and
- *  its context used at or past the threshold. */
-export function isCatHeavy(ch: Pick<Character, 'contextTokens' | 'maxContextTokens'>): boolean {
-  if (!isCatBehaviour() || thresholdPct >= CAT_HEAVY_OFF_PCT) return false;
-  const { contextTokens, maxContextTokens } = ch;
-  if (!Number.isFinite(contextTokens) || contextTokens <= 0 || !(maxContextTokens > 0)) return false;
-  return (contextTokens / maxContextTokens) * 100 >= thresholdPct;
+/** Whether a character is drawn as a heavy cat: Cat theme on, and its conversation
+ *  title or its zone is one of the heavy names. */
+export function isCatHeavy(ch: Pick<Character, 'title' | 'zone'>): boolean {
+  if (!isCatBehaviour() || names.size === 0) return false;
+  const title = ch.title?.trim().toLowerCase();
+  const zone = ch.zone?.trim().toLowerCase();
+  return (!!title && names.has(title)) || (!!zone && names.has(zone));
 }

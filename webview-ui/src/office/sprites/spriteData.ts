@@ -40,7 +40,7 @@ let loadedCharacters: LoadedCharacterData[] | null = null;
 
 /**
  * A palette's sheet as its nth repeat (repeat ≥ 1), mid-blink and/or heavy (a Cat theme
- * cat whose context is full, catHeavy.ts), or null to draw the plain sheet (a palette
+ * cat drawn as the boss, catHeavy.ts), or null to draw the plain sheet (a palette
  * that can't blink or be heavy, or one with nothing to vary).
  */
 type VariantSource = (

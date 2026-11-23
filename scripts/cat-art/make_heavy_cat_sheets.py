@@ -1,7 +1,7 @@
 """The heavy cat for the Cat theme: a broad round face with wide cheeks on a
 pear-shaped body, drawn from shapes (not cut from the pet cat), in the same eight
-coats. An agent's cat turns heavy once its context fills past the threshold set in
-Settings (office/engine/catHeavy.ts).
+coats. The boss of the office is drawn as this fat cat: the agents named in Settings
+(by conversation title or zone, "Boss" by default; office/engine/catHeavy.ts).
 
 Same layout as the other cat sheets: 3 direction rows (down, up, right) x 10 frames
 (walk1-3, type1-2, read1-2, seated, sleep1-2), 32x32 each, the sitting frames

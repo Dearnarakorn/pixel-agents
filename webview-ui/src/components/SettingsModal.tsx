@@ -1,13 +1,8 @@
 import { type CSSProperties, useRef, useState } from 'react';
 
 import { isCameraFollowEnabled, setCameraFollowEnabled } from '../cameraFollow.js';
-import { readStoredCatHeavyPct, storeCatHeavyPct } from '../characters/catHeavySetting.js';
-import {
-  CAT_HEAVY_MIN_PCT,
-  CAT_HEAVY_OFF_PCT,
-  CAT_HEAVY_STEP_PCT,
-  NOTIFICATION_VOLUME_STEP_PCT,
-} from '../constants.js';
+import { readStoredCatHeavyNames, storeCatHeavyNames } from '../characters/catHeavySetting.js';
+import { NOTIFICATION_VOLUME_STEP_PCT } from '../constants.js';
 import { isDesktopNotifyEnabled, setDesktopNotifyEnabled } from '../desktopNotify.js';
 import { officeRadio } from '../music/musicEngine.js';
 import { useOfficeRadio } from '../music/useOfficeRadio.js';
@@ -96,9 +91,7 @@ export function SettingsModal({
   const [cameraFollow, setCameraFollow] = useState(isCameraFollowEnabled);
   const [desktopNotify, setDesktopNotify] = useState(isDesktopNotifyEnabled);
   const officeTheme = useOfficeTheme();
-  const [heavyPct, setHeavyPct] = useState(readStoredCatHeavyPct);
-  const heavyFillPct =
-    ((heavyPct - CAT_HEAVY_MIN_PCT) / (CAT_HEAVY_OFF_PCT - CAT_HEAVY_MIN_PCT)) * 100;
+  const [heavyNames, setHeavyNames] = useState(readStoredCatHeavyNames);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [assetDirDraft, setAssetDirDraft] = useState('');
   // Usage Bars: installing rewrites the user's status line, so it asks first
@@ -284,27 +277,19 @@ export function SettingsModal({
         {officeTheme === 'cat' && (
           <label
             className="flex items-center gap-8 w-full py-6 px-10"
-            title="A cat turns heavy once this much of its context is used, and slim again after a compaction or /clear (this browser only; all the way right turns it off)"
+            title="The agents drawn as a fat cat, by conversation title or zone, comma separated (this browser only; empty = none)"
           >
-            <span className="shrink-0">Heavy Cat At</span>
+            <span className="shrink-0">Fat Cat</span>
             <input
-              type="range"
-              min={CAT_HEAVY_MIN_PCT}
-              max={CAT_HEAVY_OFF_PCT}
-              step={CAT_HEAVY_STEP_PCT}
-              value={heavyPct}
-              aria-label="Context used before a cat turns heavy"
-              className="pixel-range flex-1 min-w-0"
-              style={{ '--range-fill': `${heavyFillPct}%` } as CSSProperties}
+              type="text"
+              value={heavyNames}
+              placeholder="Boss"
+              aria-label="Agents drawn as a fat cat"
+              className="flex-1 min-w-0 text-xs py-2 px-4 bg-bg border-2 border-border rounded-none text-text"
               onChange={(e) => {
-                const pct = Number(e.target.value);
-                setHeavyPct(pct);
-                storeCatHeavyPct(pct);
+                setHeavyNames(e.target.value);
+                storeCatHeavyNames(e.target.value);
               }}
-            />
-            <PixelText
-              text={heavyPct >= CAT_HEAVY_OFF_PCT ? 'Off' : `${heavyPct}%`}
-              className="w-44 justify-end shrink-0"
             />
           </label>
         )}

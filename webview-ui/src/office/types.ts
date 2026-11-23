@@ -293,7 +293,7 @@ export interface Character extends Blinker {
    *  reading (a cleared session, a full gauge), not "no turn yet". */
   contextReported?: boolean;
   /** Cat theme: whether the cat is drawn heavy now (catHeavy.ts `tickCatShape`; it follows
-   *  the context, changing behind a puff of smoke), and the seconds left of that puff. */
+   *  isCatHeavy, changing behind a puff of smoke), and the seconds left of that puff. */
   catHeavyShown?: boolean;
   catPoofSec?: number;
 }

@@ -2,20 +2,14 @@ import assert from 'node:assert/strict';
 
 import { afterEach, test } from 'vitest';
 
-import {
-  CAT_HEAVY_DEFAULT_PCT,
-  CAT_HEAVY_MIN_PCT,
-  CAT_HEAVY_OFF_PCT,
-  CAT_POOF_SEC,
-} from '../src/constants.js';
+import { CAT_HEAVY_DEFAULT_NAMES, CAT_POOF_SEC } from '../src/constants.js';
 import { setCatBehaviour } from '../src/office/engine/catBehaviour.js';
 import {
   catPoofProgress,
   catPoofPuffs,
-  clampCatHeavyPct,
-  getCatHeavyThresholdPct,
+  getCatHeavyNames,
   isCatHeavy,
-  setCatHeavyThresholdPct,
+  setCatHeavyNames,
   tickCatShape,
 } from '../src/office/engine/catHeavy.js';
 import { getCharacterSprites, setCharacterTemplates } from '../src/office/sprites/spriteData.js';
@@ -24,49 +18,39 @@ import { Direction } from '../src/office/types.js';
 /** A row of `n` one-pixel frames, frame i coloured `<tag><i>`. */
 const row = (n: number, tag: string) => Array.from({ length: n }, (_, i) => [[`${tag}${i}`]]);
 const sheet = (tag: string) => ({ down: row(10, tag), up: row(10, tag), right: row(10, tag) });
-const used = (share: number) => ({ contextTokens: share * 1000, maxContextTokens: 1000 });
 
 afterEach(() => {
   setCatBehaviour(false);
-  setCatHeavyThresholdPct(CAT_HEAVY_DEFAULT_PCT);
+  setCatHeavyNames(CAT_HEAVY_DEFAULT_NAMES);
 });
 
-test('a cat turns heavy at the threshold, not before; people never do', () => {
-  setCatHeavyThresholdPct(60);
-  assert.equal(isCatHeavy(used(0.9)), false); // Office theme
+test('the Boss is the fat cat (by title or zone); everyone else, and people, are not', () => {
+  assert.equal(isCatHeavy({ title: 'Boss' }), false); // Office theme
   setCatBehaviour(true);
-  assert.equal(isCatHeavy(used(0.59)), false);
-  assert.equal(isCatHeavy(used(0.6)), true);
-  assert.equal(isCatHeavy(used(1)), true);
+  assert.equal(isCatHeavy({ title: 'Boss' }), true);
+  assert.equal(isCatHeavy({ title: '  boss ' }), true);
+  assert.equal(isCatHeavy({ title: 'Engineer', zone: 'Boss' }), true);
+  assert.equal(isCatHeavy({ title: 'Engineer', zone: 'Secretary' }), false);
+  assert.equal(isCatHeavy({}), false);
 });
 
-test('no context yet (a sub-agent, a fresh session) stays slim; the top of the range is off', () => {
+test('the names are a comma list; empty means no fat cat', () => {
   setCatBehaviour(true);
-  setCatHeavyThresholdPct(CAT_HEAVY_MIN_PCT);
-  assert.equal(isCatHeavy(used(0)), false);
-  assert.equal(isCatHeavy({ contextTokens: 500, maxContextTokens: 0 }), false);
-  setCatHeavyThresholdPct(CAT_HEAVY_OFF_PCT);
-  assert.equal(isCatHeavy(used(1)), false);
-});
-
-test('a stored threshold is clamped to the slider and rounded; junk is the default', () => {
-  assert.equal(clampCatHeavyPct(5), CAT_HEAVY_MIN_PCT);
-  assert.equal(clampCatHeavyPct(250), CAT_HEAVY_OFF_PCT);
-  assert.equal(clampCatHeavyPct(62.4), 62);
-  assert.equal(clampCatHeavyPct(Number.NaN), CAT_HEAVY_DEFAULT_PCT);
-  setCatHeavyThresholdPct(55);
-  assert.equal(getCatHeavyThresholdPct(), 55);
+  setCatHeavyNames('Boss, Engineer');
+  assert.equal(getCatHeavyNames(), 'Boss, Engineer');
+  assert.equal(isCatHeavy({ title: 'engineer' }), true);
+  setCatHeavyNames(' , ');
+  assert.equal(isCatHeavy({ title: 'Boss' }), false);
 });
 
 test('the shape changes behind a puff: halfway through, never on the first look', () => {
   setCatBehaviour(true);
-  setCatHeavyThresholdPct(40);
-  const ch: Parameters<typeof tickCatShape>[0] = { ...used(0.5) };
+  const ch: Parameters<typeof tickCatShape>[0] = { title: 'Boss' };
   tickCatShape(ch, 0.016); // first look: heavy at once, no puff
   assert.equal(ch.catHeavyShown, true);
   assert.equal(catPoofProgress(ch), null);
 
-  ch.contextTokens = 100; // compacted: slim again, behind a puff
+  ch.title = 'Boss (handed over)'; // renamed: slim again, behind a puff
   tickCatShape(ch, 0.016);
   assert.equal(ch.catPoofSec, CAT_POOF_SEC);
   assert.equal(ch.catHeavyShown, true);

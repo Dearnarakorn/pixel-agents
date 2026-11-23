@@ -7,7 +7,7 @@
  * side-on is long (the office centres a sprite on its own width). Only the
  * office and its mug shots change: the Characters view still edits the
  * people, and the Office theme brings them back. Each coat also has a heavy
- * cat (cats/heavy/), worn while the agent's context is full (catHeavy.ts).
+ * cat (cats/heavy/), worn by the boss: the agents named in Settings (catHeavy.ts).
  */
 
 import { rgbaToHex } from '../../../core/src/assets/colorUtils.js';
