@@ -370,7 +370,10 @@ describe('transcriptParser: messages from other sessions', () => {
 
   const prompt = (content: unknown) =>
     JSON.stringify({ type: 'user', isMeta: true, message: { role: 'user', content } });
-  const started = () => messages.filter((m) => m.type === 'agentStatus' && m.status === 'active');
+  // The turn's start: clearing the last turn's activity sends a bare "active"
+  // first; the one that opens the new turn carries messageFrom.
+  const started = () =>
+    messages.filter((m) => m.type === 'agentStatus' && m.status === 'active' && 'messageFrom' in m);
 
   it('names the sending session on the turn it starts', () => {
     processTranscriptLine(
@@ -382,13 +385,20 @@ describe('transcriptParser: messages from other sessions', () => {
       waitingTimers,
       permissionTimers,
     );
-    expect(started()).toEqual([{ type: 'agentStatus', id: 1, status: 'active', messageFrom: 'Boss' }]);
+    expect(started()).toEqual([
+      { type: 'agentStatus', id: 1, status: 'active', messageFrom: 'Boss' },
+    ]);
   });
 
   it('reads the tag inside a text block too', () => {
     processTranscriptLine(
       1,
-      prompt([{ type: 'text', text: '<cross-session-message from-name="Engineer" from="local_x">done</cross-session-message>' }]),
+      prompt([
+        {
+          type: 'text',
+          text: '<cross-session-message from-name="Engineer" from="local_x">done</cross-session-message>',
+        },
+      ]),
       agents,
       waitingTimers,
       permissionTimers,

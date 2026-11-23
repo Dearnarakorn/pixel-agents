@@ -75,8 +75,8 @@ import { CharacterState, TILE_SIZE, TileType } from '../types.js';
 import { getWallInstances, hasWallSprites, wallColorToHex } from '../wallTiles.js';
 import { catSideSeatSink, catSideSitZ, catSitsOnFloor } from './catBehaviour.js';
 import { type CatPuff, catPoofProgress, catPoofPuffs } from './catHeavy.js';
-import { MAIL_ENVELOPE, mailPoint } from './mail.js';
 import { getCharacterSprite } from './characters.js';
+import { MAIL_ENVELOPE, mailPoint } from './mail.js';
 import { renderMatrixEffect } from './matrixEffect.js';
 import { getPetSpriteData } from './petEntity.js';
 import type {
