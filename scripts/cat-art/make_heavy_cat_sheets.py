@@ -220,11 +220,16 @@ def mirror(pts):
     return {(W - 1 - x, y) for x, y in pts}
 
 
-FRONT_TAILS = [  # by the right flank: curled up beside it, tip raised, laid along the floor
-    curve((23, 28.5), (29, 30), (30.5, 24), (27.5, 21.5)),
-    curve((23, 28.5), (29, 30), (30.5, 25), (30, 20.5)),
-    curve((23, 28.5), (27, 30), (30.5, 29.5), (30.5, 26)),
-]
+def front_tail(k, dy=0):
+    """From the front the tail rises behind the head and curls above it, like the slim cat's
+    (drawn first, so the body and head cover its root); k swishes it: tip left, up, right."""
+    p = [((17, 13), (21, 7), (19.5, 3.8), (15.5, 5)),
+         ((17, 13), (20, 7.5), (16.5, 4), (13.5, 5.5)),
+         ((17, 13), (22, 9), (23.5, 4.5), (20.5, 4))][k]
+    return curve(*[(x, y + dy) for x, y in p], r=1.5)   # thick: a heavy cat's tail
+
+
+FRONT_TAILS = [front_tail(0), front_tail(1), front_tail(2)]
 
 
 def front_face(c, dy=0):
@@ -256,9 +261,9 @@ def front_face_marks(c, dy=0):
 def front_sit(tail=0, paper=None):
     """Sitting, from the front: a pear -- the head straight on a body that flares at the bottom."""
     c = Cat()
+    c.fill(FRONT_TAILS[tail], "c")
     body = ell(16, 24.4, 11, 6.0) | ell(16, 21, 8.4, 5)
     c.fill(body)
-    c.fill(FRONT_TAILS[tail], "c")
     head = front_face(c)
     transfer(c, body - head, "front", "body")
     transfer(c, head, "front", "head")
@@ -282,9 +287,8 @@ def front_walk(f):
     up = {0: (1, 0), 1: (0, 0), 2: (0, 1)}[f]
     for x0, u in ((10, up[0]), (18, up[1])):
         c.fill(paw_bump(x0, 5, 25, 29 - u), "b")
-    # the tail held up behind, rising past the right shoulder, its tip swaying as it walks
-    sway = (0, 1.5, 0)[f]
-    c.fill(curve((22, 22 + bob), (28, 21 + bob), (29.5 + sway, 16 + bob), (27 + sway, 13.5 + bob)), "c")
+    # the tail up behind the head, as when sitting, swaying from side to side as it walks
+    c.fill(front_tail((0, 1, 2)[f], bob), "c")
     body = ell(16, 22.6 + bob, 10.4, 5.4) | ell(16, 19.8 + bob, 8.4, 5)
     c.fill(body)
     head = front_face(c, bob - 2)
@@ -378,18 +382,13 @@ def side_face_marks(c, dy=0):
     c.dots([(23, 15 + dy, "y"), (23, 16 + dy, "a"), (26, 17 + dy, "e"), (25, 19 + dy, "a")])
 
 
-def tail_wrap(c, out=False):
-    """The tail out from under the rump, along the floor in front of the body: thick at
-    the root, a pixel at the tip, no bars across it (they read as a ladder)."""
-    core = {(x, 28) for x in range(8, 13)} | {(x, 29) for x in range(8, 17)}
-    if out:  # the tip flicked up
-        core |= {(17, 28), (17, 27)}
-    c.part(core, lambda x, y: "c")                                 # dark, like the slim cat's
-
-
 def side_sit(paw=False, out=False, paper=None):
     """Sitting side-on: a sack with a high round back, the head sunk into the shoulders."""
     c = Cat()
+    # the tail lies behind along the floor, its tip curling up, like the slim cat's; it
+    # flicks higher on the swish frames (drawn first, so the rump covers its root)
+    tip = ((1.2, 26), (2.5, 23)) if out else ((0.8, 28), (1.6, 25.2))
+    c.fill(curve((8, 28.5), (3, 30.2), *tip, r=1.1), "c")
     body = ell(13.5, 23.9, 9.2, 6.4) | ell(18.5, 21.4, 5.4, 6.2)
     c.fill(body)
     head = side_head(c)
@@ -399,7 +398,6 @@ def side_sit(paw=False, out=False, paper=None):
     c.outline()
     c.seam(head, body, 17)
     side_face_marks(c)
-    tail_wrap(c, out)
     if paw:
         c.part({(22, 22), (23, 22), (24, 22), (23, 21), (24, 21)})               # a paw up (typing)
     else:
@@ -417,6 +415,9 @@ def side_walk(f):
     hind, front = {0: ((4, 8), (19, 15)), 1: ((6, 6), (17, 17)), 2: ((8, 4), (15, 19))}[f]
     c.fill(paw_bump(hind[1], 4, 24) | paw_bump(front[1], 4, 24), "c")
     c.fill(paw_bump(hind[0], 5, 24) | paw_bump(front[0], 5, 24), "b")
+    # the tail: a big curve up from the rump, its tip swaying, like the slim cat's
+    sway = (0, 0.8, 0)[f]
+    c.fill(curve((6, 20 + dy), (1.5, 18.5 + dy), (1.2 + sway, 13 + dy), (4 + sway, 10.5 + dy), r=1.1), "c")
     body = ell(13.5, 21.1 + dy, 10.2, 4.5) | ell(18, 19.5 + dy, 5.5, 4.8)
     c.fill(body)
     head = side_head(c, dy - 1)
@@ -426,8 +427,6 @@ def side_walk(f):
     c.outline()
     c.seam(head, body, 16 + dy)
     side_face_marks(c, dy - 1)
-    c.part({(4, 20 + dy), (3, 19 + dy), (3, 18 + dy), (3, 17 + dy), (4, 16 + dy)},
-           lambda x, y: "c")                                      # tail up, dark like the slim cat's
     return c.g
 
 
