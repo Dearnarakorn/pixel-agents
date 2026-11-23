@@ -390,6 +390,19 @@ describe('transcriptParser: messages from other sessions', () => {
     ]);
   });
 
+  it('reads the desktop app’s real shape: a lead-in line before the tag', () => {
+    processTranscriptLine(
+      1,
+      prompt(
+        'Another Claude session sent a message: <cross-session-message from="local_ab12" from-name="Boss">\nplease check\n</cross-session-message>',
+      ),
+      agents,
+      waitingTimers,
+      permissionTimers,
+    );
+    expect(started()[0]?.messageFrom).toBe('Boss');
+  });
+
   it('reads the tag inside a text block too', () => {
     processTranscriptLine(
       1,

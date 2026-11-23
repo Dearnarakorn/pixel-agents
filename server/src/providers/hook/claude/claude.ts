@@ -323,8 +323,10 @@ export function contextWindowForModel(model: string | undefined): number | undef
 }
 
 /** A message from another session (the desktop app's SendMessage): the prompt
- *  opens with this tag, naming the sender's session in `from-name`. */
-const CROSS_SESSION_TAG = /^\s*<cross-session-message\b([^>]*)>/;
+ *  opens with this tag, naming the sender's session in `from-name`, after a
+ *  one-line lead-in ending in a colon ("Another Claude session sent a message: ").
+ *  A tag mentioned anywhere else in a prompt is not one. */
+const CROSS_SESSION_TAG = /^\s*(?:[^\n<]*:\s*)?<cross-session-message\b([^>]*)>/;
 const FROM_NAME_ATTR = /\bfrom-name="([^"]*)"/;
 
 /** The sending session's name when the prompt is a message from another session. */
