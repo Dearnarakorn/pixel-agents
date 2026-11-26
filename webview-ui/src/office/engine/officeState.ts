@@ -823,11 +823,18 @@ export class OfficeState {
     const seat = ch.seatId ? this.seats.get(ch.seatId) : undefined;
     if (seat) {
       const desk = deskTileOf(seat);
-      plan.note = {
-        x: desk.col * TILE_SIZE + TILE_SIZE / 2 + MAIL_NOTE_SIDE_PX,
-        y: desk.row * TILE_SIZE + TILE_SIZE / 2 - MAIL_NOTE_RISE_PX,
-        zY: (desk.row + 1) * TILE_SIZE + MAIL_NOTE_Z_LIFT,
-      };
+      const x = desk.col * TILE_SIZE + TILE_SIZE / 2 + MAIL_NOTE_SIDE_PX;
+      const y = desk.row * TILE_SIZE + TILE_SIZE / 2 - MAIL_NOTE_RISE_PX;
+      // In front of whatever is drawn where it lies (the table, a laptop on it):
+      // a big table sorts by its own bottom edge, far below this desk tile's.
+      let zY = (desk.row + 1) * TILE_SIZE + MAIL_NOTE_Z_LIFT;
+      for (const f of this.furniture) {
+        const w = f.sprite[0]?.length ?? 0;
+        if (x >= f.x && x < f.x + w && y >= f.y && y < f.y + f.sprite.length) {
+          zY = Math.max(zY, f.zY + MAIL_NOTE_Z_LIFT);
+        }
+      }
+      plan.note = { x, y, zY };
     }
     if (sender && !ch.isSubagent && !ch.matrixEffect) {
       let best: { col: number; row: number; dir: Direction; steps: number } | null = null;
