@@ -77,7 +77,7 @@ export function attachTitlesToStatus(store: AgentStateStore): void {
       // An empty string means "no zone" (absent would mean "unchanged").
       if (agent) message.zone = agentZone(agent) ?? '';
       // Team agents with a desk of their own (zones.json deskSleepZones) stay at it.
-      if (agent) message.stayAtDesk = sleepsAtDesk(agent);
+      if (agent) message.stayAtDesk = staysAtDesk(agent);
       // Work other sessions handed it that it hasn't answered yet ("from Boss").
       if (agent) message.workFrom = openWork(agent, Date.now(), agentBackgroundTasks(agent) > 0);
       // A finished turn says when it finished and whether it failed, so the
@@ -195,6 +195,9 @@ let deskSleepZones = new Set<string>();
 /** Zones of the team's leads (zones.json `leadZones`): their messages are work for
  *  the receiver, messages to them are reports (workFrom.ts). */
 let leadZones = new Set<string>();
+/** Zones whose agents sit at their own desk while idle instead of wandering
+ *  (zones.json `deskZones`; deskSleepZones count too). */
+let deskZones = new Set<string>();
 
 /**
  * The rules in ~/.pixel-agents/zones.json: `{ "rules": [[regex, zone], ...] }`.
@@ -213,13 +216,24 @@ function readZoneRules(): ZoneRule[] {
   const rules: ZoneRule[] = [];
   const atDesk = new Set<string>();
   const leads = new Set<string>();
+  const desks = new Set<string>();
   try {
     const file = path.join(os.homedir(), PIXEL_AGENTS_DIR, ZONES_FILE_NAME);
     const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf8'));
     const record =
       parsed && typeof parsed === 'object'
-        ? (parsed as { rules?: unknown; deskSleepZones?: unknown; leadZones?: unknown })
+        ? (parsed as {
+            rules?: unknown;
+            deskSleepZones?: unknown;
+            leadZones?: unknown;
+            deskZones?: unknown;
+          })
         : undefined;
+    if (Array.isArray(record?.deskZones)) {
+      for (const zone of record.deskZones) {
+        if (typeof zone === 'string') desks.add(zone);
+      }
+    }
     if (Array.isArray(record?.deskSleepZones)) {
       for (const zone of record.deskSleepZones) {
         if (typeof zone === 'string') atDesk.add(zone);
@@ -251,7 +265,15 @@ function readZoneRules(): ZoneRule[] {
   zoneRules = rules;
   deskSleepZones = atDesk;
   leadZones = leads;
+  deskZones = desks;
   return rules;
+}
+
+/** True when the agent sits at its own desk while idle (zones.json `deskZones`, or
+ *  `deskSleepZones`, which sleep there too). */
+export function staysAtDesk(agent: AgentState): boolean {
+  const zone = agentZone(agent); // reads the file when stale
+  return zone !== undefined && (deskZones.has(zone) || deskSleepZones.has(zone));
 }
 
 /** An agent in one of zones.json `leadZones`. */
@@ -303,7 +325,7 @@ export function agentWorkFrom(store: AgentStateStore): Record<number, string[]> 
 /** Agents that stay at their own desk (zones.json deskSleepZones), for `existingAgents`. */
 export function agentDeskAgents(store: AgentStateStore): Record<number, boolean> {
   const desk: Record<number, boolean> = {};
-  for (const [id, agent] of store) if (sleepsAtDesk(agent)) desk[id] = true;
+  for (const [id, agent] of store) if (staysAtDesk(agent)) desk[id] = true;
   return desk;
 }
 
