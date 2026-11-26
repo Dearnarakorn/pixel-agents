@@ -14,7 +14,7 @@ import type { HookProvider } from '../../core/src/provider.js';
 import type { AgentState } from './types.js';
 
 /** How much of a transcript's end is read for the work still open when watching starts. */
-const WORK_SEED_TAIL_BYTES = 512 * 1024;
+const WORK_SEED_TAIL_BYTES = 4 * 1024 * 1024; // a busy lead writes MBs between hand-outs
 /** Work nobody answers is let go once it is this old and its agent isn't working:
  *  a job done without a reply would otherwise say "from Boss" for ever. */
 export const WORK_OPEN_MAX_MS = 30 * 60 * 1000;
