@@ -23,14 +23,31 @@ const reply = (to: string) => [
 ];
 
 describe('work handed between sessions', () => {
-  it('opens on a message from another session and closes on the reply to it', () => {
-    const agent = {} as Pick<AgentState, 'workFrom' | 'turnActive'>;
+  it('opens on a message from another session and closes when the turn that answered it ends', () => {
+    const agent = { turnActive: true } as Pick<AgentState, 'workFrom' | 'sentTo' | 'turnActive'>;
     noteWorkGiven(agent, prompt('Boss', BOSS), claudeProvider);
     expect(openWork(agent)).toEqual(['Boss']);
     noteWorkAnswered(agent, reply('local_someone-else'), claudeProvider);
     expect(openWork(agent)).toEqual(['Boss']); // a message to someone else answers nothing
-    noteWorkAnswered(agent, reply(BOSS), claudeProvider);
-    expect(openWork(agent)).toEqual([]);
+    noteWorkAnswered(agent, reply(BOSS), claudeProvider); // "got it": still working
+    expect(openWork(agent)).toEqual(['Boss']);
+    agent.turnActive = false;
+    expect(openWork(agent, Date.now(), true)).toEqual(['Boss']); // background jobs still run
+    expect(openWork(agent)).toEqual([]); // the turn is over: done
+  });
+
+  it('review loop: answers never make the giver look like it reports back', () => {
+    // Designer: Boss hands work, Designer says "got it" and "done", Boss asks a fix.
+    const designer = { turnActive: true } as Pick<AgentState, 'workFrom' | 'sentTo' | 'turnActive'>;
+    noteWorkGiven(designer, prompt('Boss', BOSS), claudeProvider);
+    noteWorkAnswered(designer, reply(BOSS), claudeProvider); // "got it"
+    designer.turnActive = false;
+    expect(openWork(designer)).toEqual([]); // that turn ended
+    designer.turnActive = true;
+    noteWorkAnswered(designer, reply(BOSS), claudeProvider); // "done", a turn later
+    expect(designer.sentTo?.has(BOSS) ?? false).toBe(false); // an answer, not a hand-out
+    noteWorkGiven(designer, prompt('Boss', BOSS), claudeProvider); // the fix: new work
+    expect(openWork(designer)).toEqual(['Boss']);
   });
 
   it("ignores the user's own prompts and other tools", () => {

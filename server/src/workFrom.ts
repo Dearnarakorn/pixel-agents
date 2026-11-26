@@ -76,10 +76,14 @@ export function noteWorkAnswered(
     if (b.type !== 'tool_use') continue;
     const to = provider.messageRecipient(b.name || '', b.input || {});
     if (!to) continue;
+    // An answer ("got it", "done") marks the work answered; it closes when this
+    // turn ends (openWork), so "got it" early in the turn doesn't end it. Work
+    // closed lately still counts: a "done" in a later turn answers it too, and
+    // must not make the giver look like someone this agent handed work to.
     let answered = false;
-    for (const [giver, open] of agent.workFrom ?? []) {
-      if (open.address === to) {
-        agent.workFrom?.delete(giver);
+    for (const [, open] of agent.workFrom ?? []) {
+      if (open.address === to && (!open.closedAt || at - open.closedAt <= REPORT_WINDOW_MS)) {
+        open.answered = true;
         answered = true;
       }
     }
@@ -92,14 +96,22 @@ export function noteWorkAnswered(
 export function openWork(
   agent: Pick<AgentState, 'workFrom' | 'turnActive'>,
   now = Date.now(),
+  /** The turn ended but background jobs it started still run: not done yet. */
+  stillBusy = false,
 ): string[] {
   if (!agent.workFrom) return [];
-  if (!agent.turnActive) {
-    for (const [giver, open] of agent.workFrom) {
-      if (now - open.at > WORK_OPEN_MAX_MS) agent.workFrom.delete(giver);
+  for (const [giver, open] of agent.workFrom) {
+    if (open.closedAt) {
+      // Kept a while after closing (a late "done" still answers it), then dropped.
+      if (now - open.closedAt > REPORT_WINDOW_MS) agent.workFrom.delete(giver);
+      continue;
+    }
+    // Answered and the turn is over: done. Or nobody answered for too long.
+    if (!agent.turnActive && ((open.answered && !stillBusy) || now - open.at > WORK_OPEN_MAX_MS)) {
+      open.closedAt = now;
     }
   }
-  return [...agent.workFrom.keys()];
+  return [...agent.workFrom].filter(([, open]) => !open.closedAt).map(([giver]) => giver);
 }
 
 /**

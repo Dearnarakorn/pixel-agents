@@ -71,6 +71,7 @@ import {
   layNote,
   mailHandover,
   receiveMail,
+  reviewNoteOf,
   takeNote,
 } from './mail.js';
 import { advanceMatrixEffect, startMatrixEffect } from './matrixEffectState.js';
@@ -815,11 +816,14 @@ export class OfficeState {
   }
 
   /**
-   * A turn started from `from`'s message ('' = the user's prompt). The work
-   * changes hands (mail.ts): by default the sender walks a note over to this
-   * agent's desk (or carries back the note this agent gave it, onto this agent's
-   * review tray); a sender asleep, not here, or with a long queue hands it over at
-   * once, the envelope flying instead.
+   * A turn started from `from`'s message ('' = the user's prompt).
+   *  - From someone this agent handed work to lately: their report ("got it",
+   *    "done"). Just the envelope; the note comes back when their work closes.
+   *  - Otherwise new work: by default the sender walks a note in its colour over to
+   *    this agent's desk (a sender asleep, not here, or with a long queue hands it
+   *    over at once, the envelope flying instead).
+   * The note goes back, onto the giver's review tray, when the server says this
+   * agent's work from the giver closed (applyWorkFrom).
    */
   receiveMail(agentId: number, from: string): void {
     const ch = this.characters.get(agentId);
@@ -828,53 +832,77 @@ export class OfficeState {
     if (!from) return;
     const sender = findMailSender(this.characters.values(), from, agentId);
     this.refreshDeskSpot(ch);
-    if (sender) {
-      this.refreshDeskSpot(sender);
-      // A reply quicker than the walk: the work this agent is still carrying to the
-      // sender lands on the sender's desk now, so the reply carries it back.
-      const visit = ch.mailVisit;
-      if (visit?.errand?.receiverId === sender.id) {
-        layNote(sender, visit.errand.note);
-        visit.errand = undefined;
-      }
-      if (ch.mailRun?.some((e) => e.receiverId === sender.id)) {
-        for (const e of ch.mailRun) if (e.receiverId === sender.id) layNote(sender, e.note);
-        ch.mailRun = ch.mailRun.filter((e) => e.receiverId !== sender.id);
-      }
-    }
-    const { note, returning } = mailHandover(ch, from, sender);
+    if (sender) this.refreshDeskSpot(sender);
     const now = Date.now();
-    // A report from someone this agent handed work to lately, with no note left to
-    // carry back ("got it" took it already, this is "done"): no new work, just mail.
     const handedAt = ch.handedTo?.get(from.trim().toLowerCase());
-    if (!returning && handedAt !== undefined && now - handedAt <= MAIL_REPORT_WINDOW_MS) {
+    if (handedAt !== undefined && now - handedAt <= MAIL_REPORT_WINDOW_MS) {
+      // A report quicker than the walk: the note this agent is still carrying to
+      // the sender lands on the sender's desk now.
+      if (sender) this.dropCarriedNotes(ch, sender);
       flyMail(ch, sender);
       return;
     }
-    // New work: the sender has handed this agent work, so this agent's next
-    // messages to the sender (within the window) are reports.
-    if (!returning && sender && ch.title) {
+    // New work: this agent's next messages to the sender are its reports.
+    if (sender && ch.title) {
       (sender.handedTo ??= new Map()).set(ch.title.trim().toLowerCase(), now);
     }
+    const { note } = mailHandover(ch, from, null);
     const mode = getMailMode();
     if (mode === 'carry' && sender && this.canWalkMail(sender)) {
       const queued = (sender.mailRun?.length ?? 0) + (sender.mailVisit ? 1 : 0);
       if (queued < MAIL_RUN_MAX) {
-        sender.mailRun = [
-          ...(sender.mailRun ?? []),
-          { receiverId: ch.id, note, takeId: returning?.id },
-        ];
+        sender.mailRun = [...(sender.mailRun ?? []), { receiverId: ch.id, note }];
         if (!sender.mailVisit) this.startNextMailErrand(sender);
         return;
       }
     }
-    if (returning && sender) takeNote(sender, returning.id);
     layNote(ch, note);
     flyMail(ch, sender);
     if (mode === 'visit' && sender && this.canWalkMail(ch)) {
       const tile = this.besideFor(ch, sender);
       if (tile) ch.mailVisit = { ...tile, waitSec: MAIL_VISIT_WAIT_SEC, arrived: false };
     }
+  }
+
+  /** Notes `walker` is still carrying to `to` land on `to`'s desk at once. */
+  private dropCarriedNotes(walker: Character, to: Character): void {
+    const visit = walker.mailVisit;
+    if (visit?.errand?.receiverId === to.id) {
+      layNote(to, visit.errand.note);
+      visit.errand = undefined;
+    }
+    if (walker.mailRun?.some((e) => e.receiverId === to.id)) {
+      for (const e of walker.mailRun) if (e.receiverId === to.id) layNote(to, e.note);
+      walker.mailRun = walker.mailRun.filter((e) => e.receiverId !== to.id);
+    }
+  }
+
+  /** `ch`'s work from `giver` closed: its note goes back onto the giver's review
+   *  tray, carried over by `ch` (or at once, as everywhere else). */
+  private returnWork(ch: Character, giver: string): void {
+    const target = findMailSender(this.characters.values(), giver, ch.id);
+    if (target) this.dropCarriedNotes(target, ch); // still on its way here: land it first
+    const work = ch.deskNotes?.find(
+      (n) => n.kind === 'work' && n.from.trim().toLowerCase() === giver.trim().toLowerCase(),
+    );
+    if (!work) return;
+    if (!target) {
+      takeNote(ch, work.id);
+      return;
+    }
+    this.refreshDeskSpot(target);
+    const review = reviewNoteOf(work);
+    if (getMailMode() === 'carry' && this.canWalkMail(ch)) {
+      const queued = (ch.mailRun?.length ?? 0) + (ch.mailVisit ? 1 : 0);
+      if (queued < MAIL_RUN_MAX) {
+        ch.mailRun = [...(ch.mailRun ?? []), { receiverId: target.id, note: review, takeId: work.id }];
+        if (!ch.mailVisit) this.startNextMailErrand(ch);
+        return;
+      }
+    }
+    takeNote(ch, work.id);
+    layNote(target, review);
+    flyMail(target, ch);
   }
 
   /** Can walk an errand now: a main agent, awake and up, not mid spawn effect. */
@@ -992,7 +1020,16 @@ export class OfficeState {
   /** Each frame: the agent's open work, and (once, after a page load) a note on its
    *  desk for each giver whose note isn't there yet. */
   private applyWorkFrom(ch: Character): void {
-    ch.workFrom = this.workFromById.get(ch.id);
+    const now = this.workFromById.get(ch.id);
+    const before = ch.workFrom;
+    ch.workFrom = now;
+    // Work that just closed (answered, the turn over): its note goes back.
+    if (before && now && !this.restoreNotesFor.has(ch.id)) {
+      const open = new Set(now.map((g) => g.trim().toLowerCase()));
+      for (const giver of before) {
+        if (!open.has(giver.trim().toLowerCase())) this.returnWork(ch, giver);
+      }
+    }
     if (!this.restoreNotesFor.has(ch.id)) return;
     this.restoreNotesFor.delete(ch.id);
     this.refreshDeskSpot(ch);

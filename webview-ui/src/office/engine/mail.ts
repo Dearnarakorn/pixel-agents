@@ -98,6 +98,11 @@ export function mailHandover(
   return { note, returning };
 }
 
+/** The work note, now going back to its giver for review (the giver's colour kept). */
+export function reviewNoteOf(work: DeskNote): DeskNote {
+  return { ...work, id: nextNoteId++, kind: 'review', ageSec: 0, minSec: MAIL_NOTE_MIN_SEC, read: false };
+}
+
 /** Lay `note` on `ch`'s desk (a review note on the tray). One work note per giver:
  *  more work from someone whose note is already there freshens that note instead
  *  (the server counts it as one open job too). A review note that arrives after its
