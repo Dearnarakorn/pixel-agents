@@ -313,6 +313,20 @@ export const MAIL_PAPER = '#f8f4e8';
 export const MAIL_EDGE = '#8a5a3a';
 /** The "from <name>" line on a receiver's label. */
 export const MAIL_LABEL_COLOR = '#f0c070';
+/** Seconds the receiver stands by the sender, taking the work, before walking back. */
+export const MAIL_VISIT_WAIT_SEC = 2.5;
+/** A desk note stays at least this long, however short the turn it marks. */
+export const MAIL_NOTE_MIN_SEC = 15;
+/** Note colours, one per sender (picked by name, so a sender keeps its colour). */
+export const MAIL_NOTE_COLORS = ['#f6d55c', '#f49ac2', '#8fd3f4', '#9be59b', '#f7b267', '#c3a6f7'] as const;
+/** The note's shaded edge and scribbled lines. */
+export const MAIL_NOTE_SHADE = 'rgba(0, 0, 0, 0.28)';
+/** How far the note sits up from the desk tile's centre (onto its top), world px. */
+export const MAIL_NOTE_RISE_PX = 3;
+/** And this far right of it, clear of the head of a cat seated below the desk. */
+export const MAIL_NOTE_SIDE_PX = 4;
+/** The note sorts just in front of the desk it lies on (surface items use +0.5). */
+export const MAIL_NOTE_Z_LIFT = 0.6;
 /** A cat seated side-on is drawn this much lower, so it sits down into its floor cushion
  *  rather than on the cushion's top edge. */
 export const CAT_SIDE_SEAT_SINK_PX = 2;

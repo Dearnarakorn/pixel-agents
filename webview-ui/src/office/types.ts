@@ -304,6 +304,13 @@ export interface Character extends Blinker {
   mailFlightSec?: number;
   mailFromX?: number;
   mailFromY?: number;
+  /** Mail from a session in the office: walk to the tile beside the sender, stand
+   *  there facing it for `waitSec`, then back to work (characters.ts runMailVisit). */
+  mailVisit?: { col: number; row: number; dir: Direction; waitSec: number; arrived: boolean };
+  /** A note in the sender's colour on this agent's desk (world px, its centre, and the
+   *  z it sorts at), shown while the mail's turn runs and at least `mailNoteMinSec`. */
+  mailNote?: { x: number; y: number; zY: number; color: string };
+  mailNoteMinSec?: number;
 }
 
 export const PetState = { IDLE: 'idle', WALK: 'walk', FOLLOW: 'follow' } as const;

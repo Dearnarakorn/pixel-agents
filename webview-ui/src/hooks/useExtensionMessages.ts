@@ -653,10 +653,11 @@ export function useExtensionMessages(
         if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
         if (typeof msg.zone === 'string') os.setAgentZone(id, msg.zone);
         if (status === 'active') {
-          // A turn's start says who prompted it: another session (mail) or the user ('').
-          if (typeof msg.messageFrom === 'string') os.receiveMail(id, msg.messageFrom);
           os.wakeAgent(id);
           os.regroupAgent(id);
+          // A turn's start says who prompted it: another session (mail) or the user ('').
+          // After waking and regrouping: the walk to the sender starts from where it ends up.
+          if (typeof msg.messageFrom === 'string') os.receiveMail(id, msg.messageFrom);
           os.errored.delete(id);
           os.backgroundTasks.delete(id);
         } else {

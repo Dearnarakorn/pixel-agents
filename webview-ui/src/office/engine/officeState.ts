@@ -13,6 +13,9 @@ import {
   GREETER_TILE_MARGIN,
   INACTIVE_SEAT_TIMER_MIN_SEC,
   INACTIVE_SEAT_TIMER_RANGE_SEC,
+  MAIL_NOTE_RISE_PX,
+  MAIL_NOTE_SIDE_PX,
+  MAIL_NOTE_Z_LIFT,
   MAX_PET_ID_LENGTH,
   PET_HIT_HALF_WIDTH,
   PET_HIT_HEIGHT,
@@ -55,7 +58,14 @@ import {
   updateCharacter,
   updateHelper,
 } from './characters.js';
-import { endMailTurn, findMailSender, receiveMail } from './mail.js';
+import {
+  besideTiles,
+  deskTileOf,
+  endMailTurn,
+  findMailSender,
+  type MailPlan,
+  receiveMail,
+} from './mail.js';
 import { advanceMatrixEffect, startMatrixEffect } from './matrixEffectState.js';
 import { createPet, updatePet } from './petEntity.js';
 import { anchorTile, closestFreeSeat } from './seatPlacement.js';
@@ -803,7 +813,40 @@ export class OfficeState {
     const ch = this.characters.get(agentId);
     if (!ch) return;
     const sender = from ? findMailSender(this.characters.values(), from, agentId) : null;
-    receiveMail(ch, from, sender);
+    receiveMail(ch, from, sender, from ? this.mailPlan(ch, sender) : {});
+  }
+
+  /** Where `ch` stands to take mail from `sender` (the reachable tile beside it with
+   *  the shortest walk), and where the note goes on `ch`'s desk. */
+  private mailPlan(ch: Character, sender: Character | null): MailPlan {
+    const plan: MailPlan = {};
+    const seat = ch.seatId ? this.seats.get(ch.seatId) : undefined;
+    if (seat) {
+      const desk = deskTileOf(seat);
+      plan.note = {
+        x: desk.col * TILE_SIZE + TILE_SIZE / 2 + MAIL_NOTE_SIDE_PX,
+        y: desk.row * TILE_SIZE + TILE_SIZE / 2 - MAIL_NOTE_RISE_PX,
+        zY: (desk.row + 1) * TILE_SIZE + MAIL_NOTE_Z_LIFT,
+      };
+    }
+    if (sender && !ch.isSubagent && !ch.matrixEffect) {
+      let best: { col: number; row: number; dir: Direction; steps: number } | null = null;
+      this.withOwnSeatUnblocked(ch, () => {
+        for (const t of besideTiles({ col: sender.tileCol, row: sender.tileRow })) {
+          if (!isWalkable(t.col, t.row, this.tileMap, this.blockedTiles)) continue;
+          const here = t.col === ch.tileCol && t.row === ch.tileRow;
+          const steps = here
+            ? 0
+            : findPath(ch.tileCol, ch.tileRow, t.col, t.row, this.tileMap, this.blockedTiles)
+                .length;
+          if (!here && steps === 0) continue;
+          if (!best || steps < best.steps) best = { ...t, steps };
+        }
+      });
+      const found = best as { col: number; row: number; dir: Direction; steps: number } | null;
+      if (found) plan.visit = { col: found.col, row: found.row, dir: found.dir };
+    }
+    return plan;
   }
 
   /** The agent's turn ended: its "from" label goes. */
@@ -1136,8 +1179,11 @@ export class OfficeState {
         // Sentinel -1: signals turn just ended, skip next seat rest timer.
         // Prevents the WALK handler from setting a 2-4 min rest on arrival.
         ch.seatTimer = -1;
-        ch.path = [];
-        ch.moveProgress = 0;
+        // A walk to take mail goes on (mail.ts): a quick reply must not cut it short.
+        if (!ch.mailVisit) {
+          ch.path = [];
+          ch.moveProgress = 0;
+        }
       }
       this.rebuildFurnitureInstances();
     }

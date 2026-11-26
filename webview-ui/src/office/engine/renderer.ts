@@ -37,6 +37,7 @@ import {
   HEADLESS_CHARACTER_ALPHA,
   HOVERED_OUTLINE_ALPHA,
   MAIL_EDGE,
+  MAIL_NOTE_SHADE,
   MAIL_PAPER,
   OUTLINE_Z_SORT_OFFSET,
   ROTATE_BUTTON_BG,
@@ -76,7 +77,7 @@ import { getWallInstances, hasWallSprites, wallColorToHex } from '../wallTiles.j
 import { catSideSeatSink, catSideSitZ, catSitsOnFloor } from './catBehaviour.js';
 import { type CatPuff, catPoofProgress, catPoofPuffs } from './catHeavy.js';
 import { getCharacterSprite } from './characters.js';
-import { MAIL_ENVELOPE, mailPoint } from './mail.js';
+import { MAIL_ENVELOPE, MAIL_NOTE, mailPoint } from './mail.js';
 import { renderMatrixEffect } from './matrixEffect.js';
 import { getPetSpriteData } from './petEntity.js';
 import type {
@@ -498,6 +499,15 @@ export function renderScene(
       });
     }
 
+    // The note on this agent's desk while mail's work runs.
+    const note = ch.mailNote;
+    if (note) {
+      const nx = offsetX + note.x * zoom;
+      const ny = offsetY + note.y * zoom;
+      const color = note.color;
+      drawables.push({ zY: note.zY, draw: (c) => drawDeskNote(c, nx, ny, color, zoom) });
+    }
+
     // Mail from another session on its way to this agent: over everything.
     const mail = mailPoint(ch);
     if (mail) {
@@ -582,6 +592,34 @@ function drawEnvelope(c: CanvasRenderingContext2D, midX: number, midY: number, z
       if (p !== '#' && p !== 'o') continue;
       c.fillStyle = p === '#' ? MAIL_EDGE : MAIL_PAPER;
       c.fillRect(left + x * zoom, top + y * zoom, zoom, zoom);
+    }
+  });
+  c.restore();
+}
+
+/** A sticky note (mail.ts MAIL_NOTE) centred on (midX, midY): `p` paper in the
+ *  sender's colour, `s` its shade and scribbled lines. */
+function drawDeskNote(
+  c: CanvasRenderingContext2D,
+  midX: number,
+  midY: number,
+  color: string,
+  zoom: number,
+): void {
+  const rows = MAIL_NOTE;
+  const left = Math.round(midX - ((rows[0].length - 1) / 2) * zoom);
+  const top = Math.round(midY - ((rows.length - 1) / 2) * zoom);
+  c.save();
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      const p = row[x];
+      if (p !== 'p' && p !== 's') continue;
+      c.fillStyle = color;
+      c.fillRect(left + x * zoom, top + y * zoom, zoom, zoom);
+      if (p === 's') {
+        c.fillStyle = MAIL_NOTE_SHADE;
+        c.fillRect(left + x * zoom, top + y * zoom, zoom, zoom);
+      }
     }
   });
   c.restore();

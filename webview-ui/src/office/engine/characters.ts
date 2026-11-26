@@ -130,6 +130,8 @@ export function updateCharacter(
   ch.frameTimer += dt;
   tickCatShape(ch, dt);
   tickMail(ch, dt);
+  // Mail from someone in the office: go over and take it, then on as usual.
+  if (ch.mailVisit && runMailVisit(ch, dt, tileMap, blockedTiles, cat !== null)) return;
   // Work, or the Office theme, ends any cat errand at once.
   if ((ch.isActive || !cat) && (ch.catSitSec || ch.catSpot || (ch.speedMul ?? 1) !== 1)) {
     clearCatErrand(ch);
@@ -378,6 +380,81 @@ export function updateCharacter(
       break;
     }
   }
+}
+
+/**
+ * One frame of a mail visit (mail.ts): walk to the tile beside the sender, stand
+ * there facing it for the visit's wait, then hand back to the usual FSM (an
+ * active agent then walks to its seat). True while the visit owns the frame;
+ * false (and the visit dropped) when the tile can't be reached.
+ */
+function runMailVisit(
+  ch: Character,
+  dt: number,
+  tileMap: TileTypeVal[][],
+  blockedTiles: Set<string>,
+  cat: boolean,
+): boolean {
+  const visit = ch.mailVisit;
+  if (!visit) return false;
+  if (visit.arrived) {
+    ch.state = CharacterState.IDLE;
+    ch.dir = visit.dir;
+    if (cat && ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
+      ch.frameTimer -= TYPE_FRAME_DURATION_SEC;
+      ch.frame = (ch.frame + 1) % 2;
+    }
+    visit.waitSec -= dt;
+    if (visit.waitSec <= 0) {
+      ch.mailVisit = undefined;
+      ch.frame = 0;
+      ch.frameTimer = 0;
+      ch.wanderTimer = randomRange(WANDER_PAUSE_MIN_SEC, WANDER_PAUSE_MAX_SEC);
+    }
+    return true;
+  }
+  const at = ch.tileCol === visit.col && ch.tileRow === visit.row;
+  if (at && ch.moveProgress === 0) {
+    const center = tileCenter(ch.tileCol, ch.tileRow);
+    ch.x = center.x;
+    ch.y = center.y;
+    ch.path = [];
+    visit.arrived = true;
+    ch.state = CharacterState.IDLE;
+    ch.dir = visit.dir;
+    ch.frame = 0;
+    ch.frameTimer = 0;
+    return true;
+  }
+  const last = ch.path[ch.path.length - 1];
+  if (!last || last.col !== visit.col || last.row !== visit.row) {
+    // Finish the step under way, then head for the sender from there.
+    const from = ch.moveProgress > 0 && ch.path[0] ? ch.path[0] : null;
+    const rest = findPath(
+      from ? from.col : ch.tileCol,
+      from ? from.row : ch.tileRow,
+      visit.col,
+      visit.row,
+      tileMap,
+      blockedTiles,
+    );
+    if (!at && rest.length === 0 && !(from && from.col === visit.col && from.row === visit.row)) {
+      ch.mailVisit = undefined;
+      return false;
+    }
+    ch.path = from ? [from, ...rest] : rest;
+    if (!from) ch.moveProgress = 0;
+  }
+  clearCatErrand(ch);
+  ch.state = CharacterState.WALK;
+  const pace = cat ? CAT_WALK_SPEED_MUL * catHeavyPace(ch) : 1;
+  const frameSec = WALK_FRAME_DURATION_SEC / pace;
+  if (ch.frameTimer >= frameSec) {
+    ch.frameTimer -= frameSec;
+    ch.frame = (ch.frame + 1) % 4;
+  }
+  if (ch.path.length > 0) stepAlongPath(ch, dt, pace);
+  return true;
 }
 
 /** Move along `ch.path` for one frame; on reaching a tile, make it the character's tile. */
