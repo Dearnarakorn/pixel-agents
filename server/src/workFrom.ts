@@ -1,9 +1,11 @@
-/**
+﻿/**
  * Work handed between sessions, as each agent's transcript tells it: a message
  * from another session opens work from that session (its name and the address a
- * reply goes to); this agent's own message back to that address closes it. The
- * office shows the open work (agentStatus.workFrom: "from Boss", the note on the
- * desk) for as long as it is open, across turns, page loads and restarts.
+ * reply goes to); this agent's own message back to that address closes it. A
+ * message from a session this agent itself sent work to is that session's report
+ * back, not new work. The office shows the open work (agentStatus.workFrom:
+ * "from Boss", the note on the desk) for as long as it is open, across turns,
+ * page loads and restarts.
  */
 
 import * as fs from 'fs';
@@ -17,9 +19,11 @@ const WORK_SEED_TAIL_BYTES = 512 * 1024;
  *  a job done without a reply would otherwise say "from Boss" for ever. */
 export const WORK_OPEN_MAX_MS = 30 * 60 * 1000;
 
-/** A prompt opened work when another session sent it. */
+type WorkState = Pick<AgentState, 'workFrom' | 'sentTo'>;
+
+/** A prompt opened work when another session sent it (unless it reports back). */
 export function noteWorkGiven(
-  agent: Pick<AgentState, 'workFrom'>,
+  agent: WorkState,
   promptText: string,
   provider: HookProvider | null | undefined,
   at = Date.now(),
@@ -27,24 +31,35 @@ export function noteWorkGiven(
   const from = provider?.messageSender?.(promptText);
   const address = from ? provider?.messageSenderAddress?.(promptText) : undefined;
   if (!from || !address) return;
+  // From a session this agent sent work to: its report back, not new work.
+  if (agent.sentTo?.has(address)) {
+    agent.sentTo.delete(address);
+    return;
+  }
   agent.workFrom ??= new Map();
   agent.workFrom.set(from, { address, at });
 }
 
-/** Tool calls that message a session this agent owes an answer close that work. */
+/** A message to a session this agent owes an answer closes that work; any other
+ *  message hands work out (the next message from there is its report). */
 export function noteWorkAnswered(
-  agent: Pick<AgentState, 'workFrom'>,
+  agent: WorkState,
   blocks: ReadonlyArray<{ type: string; name?: string; input?: Record<string, unknown> }>,
   provider: HookProvider | null | undefined,
 ): void {
-  if (!agent.workFrom?.size || !provider?.messageRecipient) return;
+  if (!provider?.messageRecipient) return;
   for (const b of blocks) {
     if (b.type !== 'tool_use') continue;
     const to = provider.messageRecipient(b.name || '', b.input || {});
     if (!to) continue;
-    for (const [giver, open] of agent.workFrom) {
-      if (open.address === to) agent.workFrom.delete(giver);
+    let answered = false;
+    for (const [giver, open] of agent.workFrom ?? []) {
+      if (open.address === to) {
+        agent.workFrom?.delete(giver);
+        answered = true;
+      }
     }
+    if (!answered) (agent.sentTo ??= new Set()).add(to);
   }
 }
 

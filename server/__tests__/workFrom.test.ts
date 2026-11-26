@@ -40,6 +40,16 @@ describe('work handed between sessions', () => {
     expect(openWork(agent)).toEqual(['Boss']);
   });
 
+  it("a report back from someone this agent sent work to isn't new work", () => {
+    const boss = {} as Pick<AgentState, 'workFrom' | 'sentTo' | 'turnActive'>;
+    const ENG = 'local_eng';
+    noteWorkAnswered(boss, reply(ENG), claudeProvider); // Boss hands Engineer a job
+    noteWorkGiven(boss, prompt('Engineer', ENG), claudeProvider); // Engineer reports back
+    expect(openWork(boss)).toEqual([]);
+    noteWorkGiven(boss, prompt('Engineer', ENG), claudeProvider); // a new ask from Engineer
+    expect(openWork(boss)).toEqual(['Engineer']);
+  });
+
   it('lets unanswered work go after 30 minutes, but not while the agent works', () => {
     const agent = {} as Pick<AgentState, 'workFrom' | 'turnActive'>;
     noteWorkGiven(agent, prompt('Boss', BOSS), claudeProvider, 0);
