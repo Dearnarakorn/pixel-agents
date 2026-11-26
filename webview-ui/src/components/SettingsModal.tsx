@@ -9,7 +9,6 @@ import {
   storeMailTimeoutMin,
 } from '../characters/mailSetting.js';
 import { MAIL_NOTE_TIMEOUT_CHOICES_MIN, NOTIFICATION_VOLUME_STEP_PCT } from '../constants.js';
-import type { MailMode } from '../office/engine/mail.js';
 import { isDesktopNotifyEnabled, setDesktopNotifyEnabled } from '../desktopNotify.js';
 import { officeRadio } from '../music/musicEngine.js';
 import { useOfficeRadio } from '../music/useOfficeRadio.js';
@@ -20,6 +19,7 @@ import {
   setNotificationVolumePct,
   setSoundEnabled,
 } from '../notificationSound.js';
+import type { MailMode } from '../office/engine/mail.js';
 import { applyOfficeTheme, useOfficeTheme } from '../officeTheme.js';
 import { isBrowserRuntime } from '../runtime.js';
 import { transport } from '../transport/index.js';

@@ -409,7 +409,12 @@ function runMailVisit(
       ch.mailVisit = undefined;
       ch.frame = 0;
       ch.frameTimer = 0;
-      ch.wanderTimer = randomRange(WANDER_PAUSE_MIN_SEC, WANDER_PAUSE_MAX_SEC);
+      // Errands done: back to its own desk (an idle agent would otherwise wander
+      // off from wherever it delivered; a working one heads there anyway).
+      if (!ch.mailRun?.length) {
+        ch.wanderCount = ch.wanderLimit;
+        ch.wanderTimer = 0;
+      }
     }
     return true;
   }
