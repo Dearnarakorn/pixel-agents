@@ -320,7 +320,8 @@ export const MAIL_RUN_MAX = 3;
 /** A review note stays at least this long, however short the turn that reads it. */
 export const MAIL_NOTE_MIN_SEC = 15;
 /** Notes nobody answers go by themselves after this many minutes (Settings). */
-export const MAIL_NOTE_TIMEOUT_DEFAULT_MIN = 20;
+/** (The server lets unanswered work go after 30 min too: server/src/workFrom.ts.) */
+export const MAIL_NOTE_TIMEOUT_DEFAULT_MIN = 30;
 export const MAIL_NOTE_TIMEOUT_CHOICES_MIN = [15, 20, 30, 60] as const;
 /** Several notes on one desk lie this far apart (world px); the tray stacks this high. */
 export const MAIL_NOTE_SPREAD_PX = 3;

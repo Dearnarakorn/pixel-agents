@@ -32,7 +32,7 @@ export interface AgentState {
   /** Work other sessions handed this agent that it hasn't answered yet: the
    *  giver's name → the address its reply goes to. Set by a message from another
    *  session, cleared by this agent's message back to that address. */
-  workFrom?: Map<string, string>;
+  workFrom?: Map<string, { address: string; at: number }>;
   permissionSent: boolean;
   hadToolsInTurn: boolean;
   /** Directory name — the agent's origin label (only set for multi-root workspaces) */

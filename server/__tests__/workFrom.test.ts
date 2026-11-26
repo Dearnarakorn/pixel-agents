@@ -5,7 +5,13 @@ import { describe, expect, it } from 'vitest';
 
 import { claudeProvider } from '../src/providers/hook/claude/claude.js';
 import type { AgentState } from '../src/types.js';
-import { noteWorkAnswered, noteWorkGiven, openWork, seedWorkFrom } from '../src/workFrom.js';
+import {
+  noteWorkAnswered,
+  noteWorkGiven,
+  openWork,
+  seedWorkFrom,
+  WORK_OPEN_MAX_MS,
+} from '../src/workFrom.js';
 
 const BOSS = 'local_14c97969-a5fa-4fe5-91a5-562e44cae3ef';
 const prompt = (name: string, from: string) =>
@@ -16,7 +22,7 @@ const reply = (to: string) => [
 
 describe('work handed between sessions', () => {
   it('opens on a message from another session and closes on the reply to it', () => {
-    const agent = {} as Pick<AgentState, 'workFrom'>;
+    const agent = {} as Pick<AgentState, 'workFrom' | 'turnActive'>;
     noteWorkGiven(agent, prompt('Boss', BOSS), claudeProvider);
     expect(openWork(agent)).toEqual(['Boss']);
     noteWorkAnswered(agent, reply('local_someone-else'), claudeProvider);
@@ -26,12 +32,22 @@ describe('work handed between sessions', () => {
   });
 
   it("ignores the user's own prompts and other tools", () => {
-    const agent = {} as Pick<AgentState, 'workFrom'>;
+    const agent = {} as Pick<AgentState, 'workFrom' | 'turnActive'>;
     noteWorkGiven(agent, 'make the slide prettier', claudeProvider);
     expect(openWork(agent)).toEqual([]);
     noteWorkGiven(agent, prompt('Boss', BOSS), claudeProvider);
     noteWorkAnswered(agent, [{ type: 'tool_use', name: 'Read', input: { to: BOSS } }], claudeProvider);
     expect(openWork(agent)).toEqual(['Boss']);
+  });
+
+  it('lets unanswered work go after 30 minutes, but not while the agent works', () => {
+    const agent = {} as Pick<AgentState, 'workFrom' | 'turnActive'>;
+    noteWorkGiven(agent, prompt('Boss', BOSS), claudeProvider, 0);
+    agent.turnActive = true;
+    expect(openWork(agent, WORK_OPEN_MAX_MS + 1)).toEqual(['Boss']);
+    agent.turnActive = false;
+    expect(openWork(agent, WORK_OPEN_MAX_MS - 1)).toEqual(['Boss']);
+    expect(openWork(agent, WORK_OPEN_MAX_MS + 1)).toEqual([]);
   });
 
   it('is read back from the transcript tail when watching starts', () => {

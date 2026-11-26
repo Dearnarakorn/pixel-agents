@@ -13,18 +13,22 @@ import type { AgentState } from './types.js';
 
 /** How much of a transcript's end is read for the work still open when watching starts. */
 const WORK_SEED_TAIL_BYTES = 512 * 1024;
+/** Work nobody answers is let go once it is this old and its agent isn't working:
+ *  a job done without a reply would otherwise say "from Boss" for ever. */
+export const WORK_OPEN_MAX_MS = 30 * 60 * 1000;
 
 /** A prompt opened work when another session sent it. */
 export function noteWorkGiven(
   agent: Pick<AgentState, 'workFrom'>,
   promptText: string,
   provider: HookProvider | null | undefined,
+  at = Date.now(),
 ): void {
   const from = provider?.messageSender?.(promptText);
   const address = from ? provider?.messageSenderAddress?.(promptText) : undefined;
   if (!from || !address) return;
   agent.workFrom ??= new Map();
-  agent.workFrom.set(from, address);
+  agent.workFrom.set(from, { address, at });
 }
 
 /** Tool calls that message a session this agent owes an answer close that work. */
@@ -38,15 +42,25 @@ export function noteWorkAnswered(
     if (b.type !== 'tool_use') continue;
     const to = provider.messageRecipient(b.name || '', b.input || {});
     if (!to) continue;
-    for (const [giver, address] of agent.workFrom) {
-      if (address === to) agent.workFrom.delete(giver);
+    for (const [giver, open] of agent.workFrom) {
+      if (open.address === to) agent.workFrom.delete(giver);
     }
   }
 }
 
-/** The givers of the work still open, for the office. */
-export function openWork(agent: Pick<AgentState, 'workFrom'>): string[] {
-  return [...(agent.workFrom?.keys() ?? [])];
+/** The givers of the work still open, for the office (old unanswered work let go
+ *  while the agent isn't working: WORK_OPEN_MAX_MS). */
+export function openWork(
+  agent: Pick<AgentState, 'workFrom' | 'turnActive'>,
+  now = Date.now(),
+): string[] {
+  if (!agent.workFrom) return [];
+  if (!agent.turnActive) {
+    for (const [giver, open] of agent.workFrom) {
+      if (now - open.at > WORK_OPEN_MAX_MS) agent.workFrom.delete(giver);
+    }
+  }
+  return [...agent.workFrom.keys()];
 }
 
 /**
@@ -78,6 +92,7 @@ export function seedWorkFrom(agent: AgentState, provider: HookProvider | null | 
     if (!line.includes('cross-session-message') && !line.includes('"tool_use"')) continue;
     let record: {
       type?: string;
+      timestamp?: string;
       isSidechain?: boolean;
       message?: { content?: unknown };
       content?: unknown;
@@ -98,7 +113,10 @@ export function seedWorkFrom(agent: AgentState, provider: HookProvider | null | 
                 .map((b) => (b.type === 'text' && typeof b.text === 'string' ? b.text : ''))
                 .join('\n')
             : '';
-      if (promptText) noteWorkGiven(agent, promptText, provider);
+      const at = record.timestamp ? Date.parse(record.timestamp) : NaN;
+      if (promptText) {
+        noteWorkGiven(agent, promptText, provider, Number.isFinite(at) ? at : Date.now());
+      }
     } else if (record.type === 'assistant' && Array.isArray(content)) {
       noteWorkAnswered(
         agent,
