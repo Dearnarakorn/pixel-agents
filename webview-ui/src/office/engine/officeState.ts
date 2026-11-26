@@ -902,20 +902,25 @@ export class OfficeState {
     if (!ch.mailVisit && ch.mailRun?.length) this.startNextMailErrand(ch);
   }
 
-  /** The reachable tile beside `target`'s desk chair (or `target` itself when it has
-   *  no seat) with the shortest walk for `walker`, facing it: work goes to the desk,
-   *  wherever its owner has wandered off to. */
+  /** The reachable tile beside `target`'s chair or the desk in front of it (or beside
+   *  `target` itself when it has no seat) with the shortest walk for `walker`, facing
+   *  it: work goes to the desk, wherever its owner has wandered off to. */
   private besideFor(
     walker: Character,
     target: Character,
   ): { col: number; row: number; dir: Direction } | null {
     const seat = target.seatId ? this.seats.get(target.seatId) : undefined;
-    const at = seat
-      ? { col: seat.seatCol, row: seat.seatRow }
-      : { col: target.tileCol, row: target.tileRow };
+    // Beside the chair or beside the desk it faces (its front too): the nearest.
+    const spots = seat
+      ? [
+          ...besideTiles({ col: seat.seatCol, row: seat.seatRow }),
+          ...besideTiles(deskTileOf(seat)),
+        ]
+      : besideTiles({ col: target.tileCol, row: target.tileRow });
     let best: { col: number; row: number; dir: Direction; steps: number } | null = null;
     this.withOwnSeatUnblocked(walker, () => {
-      for (const t of besideTiles(at)) {
+      for (const t of spots) {
+        if (seat && t.col === seat.seatCol && t.row === seat.seatRow) continue; // the chair itself
         if (!isWalkable(t.col, t.row, this.tileMap, this.blockedTiles)) continue;
         const here = t.col === walker.tileCol && t.row === walker.tileRow;
         const steps = here
