@@ -98,17 +98,30 @@ export function mailHandover(
   return { note, returning };
 }
 
-/** Lay `note` on `ch`'s desk (a review note on the tray). A review note that arrives
- *  after its reader's turn already ended counts as read: it goes once seen a while. */
+/** Lay `note` on `ch`'s desk (a review note on the tray). One work note per giver:
+ *  more work from someone whose note is already there freshens that note instead
+ *  (the server counts it as one open job too). A review note that arrives after its
+ *  reader's turn already ended counts as read: it goes once seen a while. */
 export function layNote(ch: Pick<Character, 'deskNotes' | 'isActive'>, note: DeskNote): void {
+  if (note.kind === 'work') {
+    const there = ch.deskNotes?.find((n) => n.kind === 'work' && same(n.from, note.from));
+    if (there) {
+      there.ageSec = 0;
+      return;
+    }
+  }
   if (note.kind === 'review' && !ch.isActive) note.read = true;
   ch.deskNotes = [...(ch.deskNotes ?? []), note];
 }
 
-/** Take note `id` off `ch`'s desk (picked up to be carried back). */
+/** Take note `id` off `ch`'s desk (picked up to be carried back), and any other work
+ *  note from the same giver with it (one answer answers them all). */
 export function takeNote(ch: Pick<Character, 'deskNotes'>, id: number): void {
   if (!ch.deskNotes) return;
-  ch.deskNotes = ch.deskNotes.filter((n) => n.id !== id);
+  const taken = ch.deskNotes.find((n) => n.id === id);
+  ch.deskNotes = ch.deskNotes.filter(
+    (n) => n.id !== id && !(taken?.kind === 'work' && n.kind === 'work' && same(n.from, taken.from)),
+  );
 }
 
 /** A turn started: `from` names the session that sent it ('' = the user). */

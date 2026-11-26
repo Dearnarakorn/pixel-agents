@@ -85,6 +85,22 @@ test('the note a quick reply returns must be on the replier desk first', () => {
   assert.equal(mailHandover(boss, 't22', t22).returning?.id, carried.id);
 });
 
+test('one work note per giver, and one answer takes them all back', () => {
+  const me = agent('Repo');
+  for (let i = 0; i < 4; i++) layNote(me, mailHandover(me, 'Boss', null).note);
+  layNote(me, mailHandover(me, 'Designer', null).note);
+  assert.deepEqual(
+    me.deskNotes?.map((n) => n.from),
+    ['Boss', 'Designer'],
+  );
+  const bossNote = me.deskNotes!.find((n) => n.from === 'Boss')!;
+  takeNote(me, bossNote.id);
+  assert.deepEqual(
+    me.deskNotes?.map((n) => n.from),
+    ['Designer'],
+  );
+});
+
 test('a message with no work out is new work, even between the same pair', () => {
   const a = agent('Analyst');
   const d = agent('Designer');
