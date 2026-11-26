@@ -33,9 +33,9 @@ export interface AgentState {
    *  giver's name → the address its reply goes to. Set by a message from another
    *  session, cleared by this agent's message back to that address. */
   workFrom?: Map<string, { address: string; at: number }>;
-  /** Addresses this agent handed work to (its messages that answered nothing): the
-   *  next message from one of them is the report back, not new work. */
-  sentTo?: Set<string>;
+  /** Addresses this agent handed work to (its messages that answered nothing) and
+   *  when: messages from them within REPORT_WINDOW_MS are reports, not new work. */
+  sentTo?: Map<string, number>;
   permissionSent: boolean;
   hadToolsInTurn: boolean;
   /** Directory name — the agent's origin label (only set for multi-root workspaces) */

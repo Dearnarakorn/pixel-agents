@@ -15,6 +15,7 @@ import {
   INACTIVE_SEAT_TIMER_RANGE_SEC,
   MAIL_NOTE_RISE_PX,
   MAIL_NOTE_SIDE_PX,
+  MAIL_REPORT_WINDOW_MS,
   MAIL_NOTE_Z_LIFT,
   MAIL_RUN_MAX,
   MAIL_VISIT_WAIT_SEC,
@@ -842,6 +843,19 @@ export class OfficeState {
       }
     }
     const { note, returning } = mailHandover(ch, from, sender);
+    const now = Date.now();
+    // A report from someone this agent handed work to lately, with no note left to
+    // carry back ("got it" took it already, this is "done"): no new work, just mail.
+    const handedAt = ch.handedTo?.get(from.trim().toLowerCase());
+    if (!returning && handedAt !== undefined && now - handedAt <= MAIL_REPORT_WINDOW_MS) {
+      flyMail(ch, sender);
+      return;
+    }
+    // New work: the sender has handed this agent work, so this agent's next
+    // messages to the sender (within the window) are reports.
+    if (!returning && sender && ch.title) {
+      (sender.handedTo ??= new Map()).set(ch.title.trim().toLowerCase(), now);
+    }
     const mode = getMailMode();
     if (mode === 'carry' && sender && this.canWalkMail(sender)) {
       const queued = (sender.mailRun?.length ?? 0) + (sender.mailVisit ? 1 : 0);

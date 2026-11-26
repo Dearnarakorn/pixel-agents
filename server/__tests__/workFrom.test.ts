@@ -10,6 +10,7 @@ import {
   noteWorkAnswered,
   noteWorkGiven,
   openWork,
+  REPORT_WINDOW_MS,
   seedWorkFrom,
   WORK_OPEN_MAX_MS,
 } from '../src/workFrom.js';
@@ -44,11 +45,14 @@ describe('work handed between sessions', () => {
   it("a report back from someone this agent sent work to isn't new work", () => {
     const boss = {} as Pick<AgentState, 'workFrom' | 'sentTo' | 'turnActive'>;
     const ENG = 'local_eng';
-    noteWorkAnswered(boss, reply(ENG), claudeProvider); // Boss hands Engineer a job
-    noteWorkGiven(boss, prompt('Engineer', ENG), claudeProvider); // Engineer reports back
-    expect(openWork(boss)).toEqual([]);
-    noteWorkGiven(boss, prompt('Engineer', ENG), claudeProvider); // a new ask from Engineer
-    expect(openWork(boss)).toEqual(['Engineer']);
+    const t0 = 1_000_000;
+    noteWorkAnswered(boss, reply(ENG), claudeProvider, t0); // Boss hands Engineer a job
+    noteWorkGiven(boss, prompt('Engineer', ENG), claudeProvider, t0 + 1000); // "got it"
+    noteWorkGiven(boss, prompt('Engineer', ENG), claudeProvider, t0 + 600_000); // "done"
+    expect(openWork(boss, t0 + 600_000)).toEqual([]);
+    // Long after the hand-out, a message from Engineer is a new ask.
+    noteWorkGiven(boss, prompt('Engineer', ENG), claudeProvider, t0 + REPORT_WINDOW_MS + 1);
+    expect(openWork(boss, t0 + REPORT_WINDOW_MS + 2)).toEqual(['Engineer']);
   });
 
   it("the desktop app's send_message tool counts like SendMessage", () => {

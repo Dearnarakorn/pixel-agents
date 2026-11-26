@@ -18,6 +18,9 @@ const WORK_SEED_TAIL_BYTES = 4 * 1024 * 1024; // a busy lead writes MBs between 
 /** Work nobody answers is let go once it is this old and its agent isn't working:
  *  a job done without a reply would otherwise say "from Boss" for ever. */
 export const WORK_OPEN_MAX_MS = 30 * 60 * 1000;
+/** Messages from a session this agent handed work to within this long are its
+ *  reports ("got it", then "done"), not new work. */
+export const REPORT_WINDOW_MS = 60 * 60 * 1000;
 
 type WorkState = Pick<AgentState, 'workFrom' | 'sentTo'>;
 
@@ -52,11 +55,10 @@ export function noteWorkGiven(
   const address = from ? provider?.messageSenderAddress?.(promptText) : undefined;
   if (!from || !address) return;
   sessionNames.set(address, from);
-  // From a session this agent sent work to: its report back, not new work.
-  if (agent.sentTo?.has(address)) {
-    agent.sentTo.delete(address);
-    return;
-  }
+  // From a session this agent sent work to lately: its report back ("got it", then
+  // "done": every one of them), not new work.
+  const handedAt = agent.sentTo?.get(address);
+  if (handedAt !== undefined && at - handedAt <= REPORT_WINDOW_MS) return;
   agent.workFrom ??= new Map();
   agent.workFrom.set(from, { address, at });
 }
@@ -67,6 +69,7 @@ export function noteWorkAnswered(
   agent: WorkState,
   blocks: ReadonlyArray<{ type: string; name?: string; input?: Record<string, unknown> }>,
   provider: HookProvider | null | undefined,
+  at = Date.now(),
 ): void {
   if (!provider?.messageRecipient) return;
   for (const b of blocks) {
@@ -80,7 +83,7 @@ export function noteWorkAnswered(
         answered = true;
       }
     }
-    if (!answered) (agent.sentTo ??= new Set()).add(to);
+    if (!answered) (agent.sentTo ??= new Map()).set(to, at);
   }
 }
 
@@ -154,10 +157,12 @@ export function seedWorkFrom(agent: AgentState, provider: HookProvider | null | 
         noteWorkGiven(agent, promptText, provider, Number.isFinite(at) ? at : Date.now());
       }
     } else if (record.type === 'assistant' && Array.isArray(content)) {
+      const at = record.timestamp ? Date.parse(record.timestamp) : NaN;
       noteWorkAnswered(
         agent,
         content as Array<{ type: string; name?: string; input?: Record<string, unknown> }>,
         provider,
+        Number.isFinite(at) ? at : Date.now(),
       );
     }
   }
