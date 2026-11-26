@@ -486,6 +486,10 @@ export function useExtensionMessages(
         os.setDeskAgents(
           Object.keys((msg.deskAgents || {}) as Record<string, boolean>).map(Number),
         );
+        // Work still open per agent: its label, and its desk notes rebuilt.
+        for (const [id, givers] of Object.entries((msg.workFrom || {}) as Record<string, string[]>)) {
+          os.setAgentWorkFrom(Number(id), givers, true);
+        }
         for (const [id, since] of Object.entries((msg.idleSince || {}) as Record<string, number>)) {
           os.idleSince.set(Number(id), since);
         }
@@ -658,6 +662,7 @@ export function useExtensionMessages(
         if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
         if (typeof msg.zone === 'string') os.setAgentZone(id, msg.zone);
         if (typeof msg.stayAtDesk === 'boolean') os.setAgentStayAtDesk(id, msg.stayAtDesk);
+        if (Array.isArray(msg.workFrom)) os.setAgentWorkFrom(id, msg.workFrom as string[]);
         if (status === 'active') {
           os.wakeAgent(id);
           os.regroupAgent(id);

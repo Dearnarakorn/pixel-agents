@@ -45,6 +45,7 @@ import {
   agentIdleStates,
   agentLinks,
   agentTitles,
+  agentWorkFrom,
   agentZones,
 } from './officeExtras.js';
 import { getPaletteCount } from './paletteAssigner.js';
@@ -776,6 +777,7 @@ function handleWebviewReady(send: WsSend, ctx: ClientMessageContext): void {
     titles: agentTitles(store),
     zones: agentZones(store),
     deskAgents: agentDeskAgents(store),
+    workFrom: agentWorkFrom(store),
     links: agentLinks(store),
     ...agentIdleStates(store),
   });

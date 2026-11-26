@@ -303,6 +303,15 @@ components:
           description: Map of agent ID (string) to project group (agents that have one).
           additionalProperties:
             type: string
+        workFrom:
+          type: object
+          description: >-
+            Map of agent ID (string) to the names of the sessions whose work it
+            hasn't answered yet (agents that have any).
+          additionalProperties:
+            type: array
+            items:
+              type: string
         deskAgents:
           type: object
           description: >-
@@ -383,6 +392,15 @@ components:
           description: >-
             With status "waiting": background tasks the session started and is
             still waiting on. The office labels it "Waiting · N jobs", not "Done".
+        workFrom:
+          type: array
+          items:
+            type: string
+          description: >-
+            The sessions that handed this agent work it hasn't answered yet (their
+            names, oldest first): a message from another session opens it, this
+            agent's message back closes it. The office labels the agent "from <name>"
+            and keeps that session's note on its desk while it is open.
         stayAtDesk:
           type: boolean
           description: >-

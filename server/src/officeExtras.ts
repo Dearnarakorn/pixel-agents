@@ -28,6 +28,7 @@ import {
 } from './constants.js';
 import { getHookProvider } from './transcriptParser.js';
 import type { AgentState } from './types.js';
+import { openWork } from './workFrom.js';
 
 // ── Titles ───────────────────────────────────────────────────
 
@@ -75,6 +76,8 @@ export function attachTitlesToStatus(store: AgentStateStore): void {
       if (agent) message.zone = agentZone(agent) ?? '';
       // Team agents with a desk of their own (zones.json deskSleepZones) stay at it.
       if (agent) message.stayAtDesk = sleepsAtDesk(agent);
+      // Work other sessions handed it that it hasn't answered yet ("from Boss").
+      if (agent) message.workFrom = openWork(agent);
       // A finished turn says when it finished and whether it failed, so the
       // office can label it "Done · 5m" or "Error" instead of a bare "Idle".
       if (agent && message.status === 'waiting' && message.sleeping !== true) {
@@ -259,6 +262,16 @@ export function agentZone(agent: AgentState): string | undefined {
     }
   }
   return undefined;
+}
+
+/** Open work per agent (the givers' names), for `existingAgents`. */
+export function agentWorkFrom(store: AgentStateStore): Record<number, string[]> {
+  const work: Record<number, string[]> = {};
+  for (const [id, agent] of store) {
+    const open = openWork(agent);
+    if (open.length) work[id] = open;
+  }
+  return work;
 }
 
 /** Agents that stay at their own desk (zones.json deskSleepZones), for `existingAgents`. */

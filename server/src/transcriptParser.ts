@@ -19,6 +19,7 @@ import {
   startWaitingTimer,
 } from './timerManager.js';
 import type { AgentState } from './types.js';
+import { noteWorkAnswered, noteWorkGiven } from './workFrom.js';
 
 /** Empty set used as safe fallback when no HookProvider is registered. */
 const EMPTY_EXEMPT_TOOLS: ReadonlySet<string> = new Set();
@@ -65,6 +66,8 @@ function beginTurn(
   // Who sent this turn's prompt when another session did ('' = the user): the
   // office flies mail between them and labels the receiver until the turn ends.
   const messageFrom = hookProvider?.messageSender ? (hookProvider.messageSender(text) ?? '') : undefined;
+  // Work handed over stays open until this agent messages the giver back.
+  noteWorkGiven(agent, text, hookProvider);
   agents.broadcast({
     type: 'agentStatus',
     id: agentId,
@@ -235,6 +238,9 @@ export function processTranscriptLine(
       const hasToolUse = blocks.some((b) => b.type === 'tool_use');
 
       if (hasToolUse) {
+        // A message back to someone who handed this agent work answers it (before
+        // the status below, which carries what is still open).
+        noteWorkAnswered(agent, blocks, hookProvider);
         cancelWaitingTimer(agentId, waitingTimers);
         agent.isWaiting = false;
         agent.turnActive = true;

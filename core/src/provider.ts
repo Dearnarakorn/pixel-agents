@@ -219,6 +219,12 @@ export interface HookProvider {
    *  typed), else undefined. The office shows it as mail between characters.
    *  Undefined = this CLI has no session-to-session messages. */
   messageSender?(promptText: string): string | undefined;
+  /** The sending session's own address in such a prompt (what a reply is sent to),
+   *  so a later reply can be told apart; undefined when the prompt names none. */
+  messageSenderAddress?(promptText: string): string | undefined;
+  /** The address a tool call sends a message to another session, when it is such a
+   *  call (the reply to work handed over), else undefined. */
+  messageRecipient?(toolName: string, input: Record<string, unknown>): string | undefined;
   /** A link (a custom URL scheme of the CLI's own app) that brings the session
    *  to the front there, or undefined when this id cannot be linked. The office
    *  opens it when an agent without a terminal is clicked a second time.

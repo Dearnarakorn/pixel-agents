@@ -321,6 +321,9 @@ export function ToolOverlay({
           dotColor = 'var(--color-status-active)';
         }
 
+        // Who it is working for: the work still open (until it answers the giver),
+        // else whoever started this turn.
+        const fromNames = ch.workFrom?.length ? ch.workFrom.join(', ') : ch.mailFrom;
         // Work back from others, waiting on this agent's tray.
         const reviewCount = ch.deskNotes?.filter((n) => n.kind === 'review').length ?? 0;
 
@@ -373,14 +376,14 @@ export function ToolOverlay({
                       {teamRoleLabel}
                     </span>
                   )}
-                  {!isSub && ch.mailFrom && (
+                  {!isSub && fromNames && (
                     <span
                       className="flex items-center gap-4 overflow-hidden text-ellipsis leading-none"
                       style={{ fontSize: '18px', color: MAIL_LABEL_COLOR }}
                       data-testid="mail-from"
                     >
                       <PixelIcon name="mail" scale={1} />
-                      {`from ${ch.mailFrom}`}
+                      {`from ${fromNames}`}
                     </span>
                   )}
                   {!isSub && reviewCount > 0 && (

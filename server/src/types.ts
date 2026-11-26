@@ -29,6 +29,10 @@ export interface AgentState {
   /** The last turn ended on an error the CLI reported (rate limit, overload…)
    *  rather than on an answer. Cleared when the next prompt starts a turn. */
   turnErrored?: boolean;
+  /** Work other sessions handed this agent that it hasn't answered yet: the
+   *  giver's name → the address its reply goes to. Set by a message from another
+   *  session, cleared by this agent's message back to that address. */
+  workFrom?: Map<string, string>;
   permissionSent: boolean;
   hadToolsInTurn: boolean;
   /** Directory name — the agent's origin label (only set for multi-root workspaces) */

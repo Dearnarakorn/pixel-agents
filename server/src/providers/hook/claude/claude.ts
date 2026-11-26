@@ -337,6 +337,26 @@ export function messageSender(promptText: string): string | undefined {
   return name || undefined;
 }
 
+const FROM_ATTR = /(?:^|\s)from="([^"]*)"/;
+
+/** The sending session's address (`from`, e.g. local_…) of such a prompt. */
+export function messageSenderAddress(promptText: string): string | undefined {
+  const tag = CROSS_SESSION_TAG.exec(promptText);
+  if (!tag) return undefined;
+  const id = FROM_ATTR.exec(tag[1])?.[1]?.trim();
+  return id || undefined;
+}
+
+/** The session a SendMessage call writes to (its `to`), or undefined for any other call. */
+export function messageRecipient(
+  toolName: string,
+  input: Record<string, unknown>,
+): string | undefined {
+  if (toolName !== 'SendMessage') return undefined;
+  const to = input.to ?? input.recipient;
+  return typeof to === 'string' && to.trim() ? to.trim() : undefined;
+}
+
 // ── The provider ──
 
 export const claudeProvider: HookProvider = {
@@ -366,6 +386,8 @@ export const claudeProvider: HookProvider = {
   isInheritedSessionEnv: isInheritedClaudeSessionEnv,
   conversationTitle,
   messageSender,
+  messageSenderAddress,
+  messageRecipient,
   sessionLink,
   lastActivityAt,
   backgroundTasksRunning,

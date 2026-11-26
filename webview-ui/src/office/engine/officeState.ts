@@ -960,6 +960,31 @@ export class OfficeState {
     else this.deskAgentIds.delete(id);
   }
 
+  /** Work other sessions handed each agent that it hasn't answered (the server's
+   *  account, givers' names): its label says "from …" while any is open. */
+  private workFromById = new Map<number, string[]>();
+  /** Agents whose desk notes are to be rebuilt from that account (after a page load). */
+  private restoreNotesFor = new Set<number>();
+  setAgentWorkFrom(id: number, givers: string[], restoreNotes = false): void {
+    this.workFromById.set(id, givers);
+    if (restoreNotes) this.restoreNotesFor.add(id);
+  }
+
+  /** Each frame: the agent's open work, and (once, after a page load) a note on its
+   *  desk for each giver whose note isn't there yet. */
+  private applyWorkFrom(ch: Character): void {
+    ch.workFrom = this.workFromById.get(ch.id);
+    if (!this.restoreNotesFor.has(ch.id)) return;
+    this.restoreNotesFor.delete(ch.id);
+    this.refreshDeskSpot(ch);
+    for (const giver of ch.workFrom ?? []) {
+      const there = ch.deskNotes?.some(
+        (n) => n.kind === 'work' && n.from.trim().toLowerCase() === giver.trim().toLowerCase(),
+      );
+      if (!there) layNote(ch, mailHandover(ch, giver, null).note);
+    }
+  }
+
   /** The agent's turn ended: its "from" label goes, and review notes it read go. */
   endMailTurn(agentId: number): void {
     const ch = this.characters.get(agentId);
@@ -1693,6 +1718,7 @@ export class OfficeState {
         );
       } else {
         ch.stayAtDesk = this.deskAgentIds.has(ch.id);
+        this.applyWorkFrom(ch);
         // Temporarily unblock own seat so character can pathfind to it
         this.withOwnSeatUnblocked(ch, () =>
           updateCharacter(
