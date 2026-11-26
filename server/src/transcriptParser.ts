@@ -19,7 +19,7 @@ import {
   startWaitingTimer,
 } from './timerManager.js';
 import type { AgentState } from './types.js';
-import { noteWorkAnswered, noteWorkGiven } from './workFrom.js';
+import { messagingStatus, noteWorkAnswered, noteWorkGiven } from './workFrom.js';
 
 /** Empty set used as safe fallback when no HookProvider is registered. */
 const EMPTY_EXEMPT_TOOLS: ReadonlySet<string> = new Set();
@@ -159,7 +159,12 @@ export function setTeamSwitchCallback(
 /** Format a tool status line. Delegates to the active HookProvider's formatToolStatus.
  *  Invariant: a provider is registered before any transcript lines are parsed. */
 export function formatToolStatus(toolName: string, input: Record<string, unknown>): string {
-  return hookProvider?.formatToolStatus(toolName, input) ?? `Using ${toolName}`;
+  // A message to another session reads "Messaging Boss", not the tool or an address.
+  return (
+    messagingStatus(toolName, input, hookProvider) ??
+    hookProvider?.formatToolStatus(toolName, input) ??
+    `Using ${toolName}`
+  );
 }
 
 export function processTranscriptLine(

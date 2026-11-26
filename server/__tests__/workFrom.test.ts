@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { claudeProvider } from '../src/providers/hook/claude/claude.js';
 import type { AgentState } from '../src/types.js';
 import {
+  messagingStatus,
   noteWorkAnswered,
   noteWorkGiven,
   openWork,
@@ -63,6 +64,20 @@ describe('work handed between sessions', () => {
     noteWorkAnswered(boss, send, claudeProvider);
     noteWorkGiven(boss, prompt('t22', T22), claudeProvider);
     expect(openWork(boss)).toEqual([]);
+  });
+
+  it('labels a message call with the name learnt from that session', () => {
+    const agent = {} as Pick<AgentState, 'workFrom' | 'sentTo' | 'turnActive'>;
+    noteWorkGiven(agent, prompt('Boss', BOSS), claudeProvider);
+    expect(messagingStatus('SendMessage', { to: BOSS }, claudeProvider)).toBe('Messaging Boss');
+    expect(
+      messagingStatus(
+        'mcp__ccd_session_mgmt__send_message',
+        { session_id: 'local_never-seen' },
+        claudeProvider,
+      ),
+    ).toBe('Messaging another session');
+    expect(messagingStatus('Read', { file_path: 'x' }, claudeProvider)).toBeUndefined();
   });
 
   it('lets unanswered work go after 30 minutes, but not while the agent works', () => {

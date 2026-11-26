@@ -21,6 +21,26 @@ export const WORK_OPEN_MAX_MS = 30 * 60 * 1000;
 
 type WorkState = Pick<AgentState, 'workFrom' | 'sentTo'>;
 
+/** Session names by address, learnt from every message seen (address → from-name). */
+const sessionNames = new Map<string, string>();
+
+/** The name of the session at `address`, when any message from it has been seen. */
+export function sessionNameOf(address: string): string | undefined {
+  return sessionNames.get(address);
+}
+
+/** A label for a tool call that messages another session ("Messaging Boss"), or
+ *  undefined when the call is no such message. */
+export function messagingStatus(
+  toolName: string,
+  input: Record<string, unknown>,
+  provider: HookProvider | null | undefined,
+): string | undefined {
+  const to = provider?.messageRecipient?.(toolName, input);
+  if (!to) return undefined;
+  return `Messaging ${sessionNameOf(to) ?? 'another session'}`;
+}
+
 /** A prompt opened work when another session sent it (unless it reports back). */
 export function noteWorkGiven(
   agent: WorkState,
@@ -31,6 +51,7 @@ export function noteWorkGiven(
   const from = provider?.messageSender?.(promptText);
   const address = from ? provider?.messageSenderAddress?.(promptText) : undefined;
   if (!from || !address) return;
+  sessionNames.set(address, from);
   // From a session this agent sent work to: its report back, not new work.
   if (agent.sentTo?.has(address)) {
     agent.sentTo.delete(address);
