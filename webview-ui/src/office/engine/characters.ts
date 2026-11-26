@@ -133,7 +133,10 @@ export function updateCharacter(
   // Mail from someone in the office: go over and take it, then on as usual.
   if (ch.mailVisit && runMailVisit(ch, dt, tileMap, blockedTiles, cat !== null)) return;
   // Work, or the Office theme, ends any cat errand at once.
-  if ((ch.isActive || !cat) && (ch.catSitSec || ch.catSpot || (ch.speedMul ?? 1) !== 1)) {
+  if (
+    (ch.isActive || !cat || ch.stayAtDesk) &&
+    (ch.catSitSec || ch.catSpot || (ch.speedMul ?? 1) !== 1)
+  ) {
     clearCatErrand(ch);
   }
 
@@ -147,6 +150,11 @@ export function updateCharacter(
       }
       // If no longer active, stand up and start wandering (after seatTimer expires)
       if (!ch.isActive) {
+        // A team member with its own desk stays in its chair.
+        if (ch.stayAtDesk && ch.seatId && !ch.inBed) {
+          ch.seatTimer = 0;
+          break;
+        }
         if (ch.seatTimer > 0) {
           ch.seatTimer -= dt;
           break;
@@ -224,6 +232,19 @@ export function updateCharacter(
           }
         }
         break;
+      }
+      // A team member with its own desk goes back to it rather than wandering.
+      if (ch.stayAtDesk && ch.seatId) {
+        const seat = seats.get(ch.seatId);
+        if (seat && ch.tileCol === seat.seatCol && ch.tileRow === seat.seatRow) {
+          ch.state = CharacterState.TYPE;
+          ch.dir = seat.facingDir;
+          ch.frame = 0;
+          ch.frameTimer = 0;
+          break;
+        }
+        ch.wanderCount = ch.wanderLimit;
+        ch.wanderTimer = 0;
       }
       // Countdown wander timer
       ch.wanderTimer -= dt;

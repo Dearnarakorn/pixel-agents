@@ -337,6 +337,9 @@ export interface Character extends Blinker {
     arrived: boolean;
     errand?: MailErrand;
   };
+  /** A team member with a desk of its own: idle, it sits at that desk rather than
+   *  wandering (errands still take it away, and it comes back). */
+  stayAtDesk?: boolean;
   /** Notes this agent still has to carry, in order (it walks them one by one). */
   mailRun?: MailErrand[];
   /** Notes on this agent's desk: work given to it, and work back for review (its tray). */

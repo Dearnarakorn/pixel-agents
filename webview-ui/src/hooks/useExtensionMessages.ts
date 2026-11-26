@@ -482,6 +482,10 @@ export function useExtensionMessages(
         const titles = (msg.titles || {}) as Record<number, string>;
         const zones = (msg.zones || {}) as Record<number, string>;
         const links = (msg.links || {}) as Record<number, string>;
+        // Team agents who stay at their desk (also on every agentStatus).
+        os.setDeskAgents(
+          Object.keys((msg.deskAgents || {}) as Record<string, boolean>).map(Number),
+        );
         for (const [id, since] of Object.entries((msg.idleSince || {}) as Record<string, number>)) {
           os.idleSince.set(Number(id), since);
         }
@@ -646,12 +650,14 @@ export function useExtensionMessages(
         const id = msg.id as number;
         if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
         if (typeof msg.zone === 'string') os.setAgentZone(id, msg.zone);
+        if (typeof msg.stayAtDesk === 'boolean') os.setAgentStayAtDesk(id, msg.stayAtDesk);
         os.sleepAgent(id, msg.atDesk === true);
       } else if (msg.type === 'agentStatus') {
         const id = msg.id as number;
         const status = msg.status as string;
         if (typeof msg.title === 'string') os.setAgentTitle(id, msg.title);
         if (typeof msg.zone === 'string') os.setAgentZone(id, msg.zone);
+        if (typeof msg.stayAtDesk === 'boolean') os.setAgentStayAtDesk(id, msg.stayAtDesk);
         if (status === 'active') {
           os.wakeAgent(id);
           os.regroupAgent(id);

@@ -73,6 +73,8 @@ export function attachTitlesToStatus(store: AgentStateStore): void {
       // The zone too: a title rule can move an agent when its chat is renamed.
       // An empty string means "no zone" (absent would mean "unchanged").
       if (agent) message.zone = agentZone(agent) ?? '';
+      // Team agents with a desk of their own (zones.json deskSleepZones) stay at it.
+      if (agent) message.stayAtDesk = sleepsAtDesk(agent);
       // A finished turn says when it finished and whether it failed, so the
       // office can label it "Done · 5m" or "Error" instead of a bare "Idle".
       if (agent && message.status === 'waiting' && message.sleeping !== true) {
@@ -257,6 +259,13 @@ export function agentZone(agent: AgentState): string | undefined {
     }
   }
   return undefined;
+}
+
+/** Agents that stay at their own desk (zones.json deskSleepZones), for `existingAgents`. */
+export function agentDeskAgents(store: AgentStateStore): Record<number, boolean> {
+  const desk: Record<number, boolean> = {};
+  for (const [id, agent] of store) if (sleepsAtDesk(agent)) desk[id] = true;
+  return desk;
 }
 
 /** Zones of every agent that has one, keyed by agent id (for `existingAgents`). */

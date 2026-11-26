@@ -827,7 +827,20 @@ export class OfficeState {
     if (!from) return;
     const sender = findMailSender(this.characters.values(), from, agentId);
     this.refreshDeskSpot(ch);
-    if (sender) this.refreshDeskSpot(sender);
+    if (sender) {
+      this.refreshDeskSpot(sender);
+      // A reply quicker than the walk: the work this agent is still carrying to the
+      // sender lands on the sender's desk now, so the reply carries it back.
+      const visit = ch.mailVisit;
+      if (visit?.errand?.receiverId === sender.id) {
+        layNote(sender, visit.errand.note);
+        visit.errand = undefined;
+      }
+      if (ch.mailRun?.some((e) => e.receiverId === sender.id)) {
+        for (const e of ch.mailRun) if (e.receiverId === sender.id) layNote(sender, e.note);
+        ch.mailRun = ch.mailRun.filter((e) => e.receiverId !== sender.id);
+      }
+    }
     const { note, returning } = mailHandover(ch, from, sender);
     const mode = getMailMode();
     if (mode === 'carry' && sender && this.canWalkMail(sender)) {
@@ -933,6 +946,18 @@ export class OfficeState {
       }
     }
     ch.deskSpot = { x, y, zY };
+  }
+
+  /** Team agents with a desk of their own (zones.json deskSleepZones): they sit at it
+   *  when idle instead of wandering. The whole list (existingAgents) ... */
+  private deskAgentIds = new Set<number>();
+  setDeskAgents(ids: number[]): void {
+    this.deskAgentIds = new Set(ids);
+  }
+  /** ... and one agent at a time (every agentStatus says). */
+  setAgentStayAtDesk(id: number, stay: boolean): void {
+    if (stay) this.deskAgentIds.add(id);
+    else this.deskAgentIds.delete(id);
   }
 
   /** The agent's turn ended: its "from" label goes, and review notes it read go. */
@@ -1667,6 +1692,7 @@ export class OfficeState {
           this.blockedTiles,
         );
       } else {
+        ch.stayAtDesk = this.deskAgentIds.has(ch.id);
         // Temporarily unblock own seat so character can pathfind to it
         this.withOwnSeatUnblocked(ch, () =>
           updateCharacter(

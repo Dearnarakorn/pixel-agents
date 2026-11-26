@@ -303,6 +303,13 @@ components:
           description: Map of agent ID (string) to project group (agents that have one).
           additionalProperties:
             type: string
+        deskAgents:
+          type: object
+          description: >-
+            Map of agent ID (string) to true for agents that stay at their own desk
+            when idle (zone in zones.json deskSleepZones).
+          additionalProperties:
+            type: boolean
         links:
           type: object
           description: Map of agent ID (string) to session link (agents that have one).
@@ -376,6 +383,12 @@ components:
           description: >-
             With status "waiting": background tasks the session started and is
             still waiting on. The office labels it "Waiting · N jobs", not "Done".
+        stayAtDesk:
+          type: boolean
+          description: >-
+            The agent's zone is listed in zones.json deskSleepZones (a team member
+            with a desk of its own): the office keeps it seated at that desk when
+            idle instead of letting it wander off.
         messageFrom:
           type: string
           description: >-

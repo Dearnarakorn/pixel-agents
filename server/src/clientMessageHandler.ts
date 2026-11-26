@@ -40,7 +40,13 @@ import {
 import { collectDirectorySuggestions } from './directorySuggestions.js';
 import { hostDirectory } from './hostDirectory.js';
 import { readLayoutFromFile, writeLayoutToFile } from './layoutPersistence.js';
-import { agentIdleStates, agentLinks, agentTitles, agentZones } from './officeExtras.js';
+import {
+  agentDeskAgents,
+  agentIdleStates,
+  agentLinks,
+  agentTitles,
+  agentZones,
+} from './officeExtras.js';
 import { getPaletteCount } from './paletteAssigner.js';
 import type { ConsentEffects } from './providers/hook/consentExecutor.js';
 import { applyConsentChoice } from './providers/hook/consentExecutor.js';
@@ -769,6 +775,7 @@ function handleWebviewReady(send: WsSend, ctx: ClientMessageContext): void {
     externalAgents,
     titles: agentTitles(store),
     zones: agentZones(store),
+    deskAgents: agentDeskAgents(store),
     links: agentLinks(store),
     ...agentIdleStates(store),
   });

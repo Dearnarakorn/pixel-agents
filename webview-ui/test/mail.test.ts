@@ -74,6 +74,17 @@ test('assign, return, review: the note goes there and back in the giver colour',
   assert.equal(boss.deskNotes?.length, 1);
 });
 
+test('the note a quick reply returns must be on the replier desk first', () => {
+  // officeState lays a still-carried note on the replier's desk before the
+  // handover; with it there, the reply is a return, not new work.
+  const boss = agent('Boss');
+  const t22 = agent('t22');
+  const carried = mailHandover(t22, 'Boss', boss).note;
+  assert.equal(mailHandover(boss, 't22', t22).returning, null); // still in Boss's paws
+  layNote(t22, carried);
+  assert.equal(mailHandover(boss, 't22', t22).returning?.id, carried.id);
+});
+
 test('a message with no work out is new work, even between the same pair', () => {
   const a = agent('Analyst');
   const d = agent('Designer');
