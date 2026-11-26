@@ -347,13 +347,21 @@ export function messageSenderAddress(promptText: string): string | undefined {
   return id || undefined;
 }
 
-/** The session a SendMessage call writes to (its `to`), or undefined for any other call. */
+/** The desktop app's session-management tool that messages another session. */
+const SEND_MESSAGE_MCP_TOOL = /(^|__)send_message$/;
+
+/** The session a message call writes to, or undefined for any other call: the
+ *  SendMessage tool's `to`, or the app's session tool's `session_id`. */
 export function messageRecipient(
   toolName: string,
   input: Record<string, unknown>,
 ): string | undefined {
-  if (toolName !== 'SendMessage') return undefined;
-  const to = input.to ?? input.recipient;
+  const to =
+    toolName === 'SendMessage'
+      ? (input.to ?? input.recipient)
+      : SEND_MESSAGE_MCP_TOOL.test(toolName)
+        ? input.session_id
+        : undefined;
   return typeof to === 'string' && to.trim() ? to.trim() : undefined;
 }
 

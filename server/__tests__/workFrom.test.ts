@@ -50,6 +50,21 @@ describe('work handed between sessions', () => {
     expect(openWork(boss)).toEqual(['Engineer']);
   });
 
+  it("the desktop app's send_message tool counts like SendMessage", () => {
+    const boss = {} as Pick<AgentState, 'workFrom' | 'sentTo' | 'turnActive'>;
+    const T22 = 'local_6ebe783f';
+    const send = [
+      {
+        type: 'tool_use',
+        name: 'mcp__ccd_session_mgmt__send_message',
+        input: { session_id: T22, message: 'do it' },
+      },
+    ];
+    noteWorkAnswered(boss, send, claudeProvider);
+    noteWorkGiven(boss, prompt('t22', T22), claudeProvider);
+    expect(openWork(boss)).toEqual([]);
+  });
+
   it('lets unanswered work go after 30 minutes, but not while the agent works', () => {
     const agent = {} as Pick<AgentState, 'workFrom' | 'turnActive'>;
     noteWorkGiven(agent, prompt('Boss', BOSS), claudeProvider, 0);
