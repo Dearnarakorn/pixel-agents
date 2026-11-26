@@ -15,7 +15,6 @@ import {
   INACTIVE_SEAT_TIMER_RANGE_SEC,
   MAIL_NOTE_RISE_PX,
   MAIL_NOTE_SIDE_PX,
-  MAIL_REPORT_WINDOW_MS,
   MAIL_NOTE_Z_LIFT,
   MAIL_RUN_MAX,
   MAIL_VISIT_WAIT_SEC,
@@ -816,37 +815,34 @@ export class OfficeState {
   }
 
   /**
-   * A turn started from `from`'s message ('' = the user's prompt).
-   *  - From someone this agent handed work to lately: their report ("got it",
-   *    "done"). Just the envelope; the note comes back when their work closes.
-   *  - Otherwise new work: by default the sender walks a note in its colour over to
-   *    this agent's desk (a sender asleep, not here, or with a long queue hands it
-   *    over at once, the envelope flying instead).
-   * The note goes back, onto the giver's review tray, when the server says this
-   * agent's work from the giver closed (applyWorkFrom).
+   * A turn started from `from`'s message ('' = the user's prompt). Whether it is
+   * work or a report is the server's call (agentStatus.workFrom, which arrives with
+   * it): work is carried over as a note (applyWorkFrom → assignWork); a report only
+   * flies the envelope. The note goes back, onto the giver's review tray, when the
+   * server says the work closed (applyWorkFrom → returnWork).
    */
   receiveMail(agentId: number, from: string): void {
     const ch = this.characters.get(agentId);
     if (!ch) return;
     receiveMail(ch, from);
     if (!from) return;
+    const isWork = (this.workFromById.get(agentId) ?? []).some(
+      (g) => g.trim().toLowerCase() === from.trim().toLowerCase(),
+    );
+    if (isWork) return; // assignWork carries it over
     const sender = findMailSender(this.characters.values(), from, agentId);
+    if (sender) this.dropCarriedNotes(ch, sender); // a report quicker than the walk
+    flyMail(ch, sender);
+  }
+
+  /** `ch` was given work by `giver`: the giver walks a note in its colour over to
+   *  `ch`'s desk (asleep, not here, or with a long queue: at once, with the envelope;
+   *  'visit' mode: `ch` walks over to the giver instead). */
+  private assignWork(ch: Character, giver: string): void {
+    const sender = findMailSender(this.characters.values(), giver, ch.id);
     this.refreshDeskSpot(ch);
     if (sender) this.refreshDeskSpot(sender);
-    const now = Date.now();
-    const handedAt = ch.handedTo?.get(from.trim().toLowerCase());
-    if (handedAt !== undefined && now - handedAt <= MAIL_REPORT_WINDOW_MS) {
-      // A report quicker than the walk: the note this agent is still carrying to
-      // the sender lands on the sender's desk now.
-      if (sender) this.dropCarriedNotes(ch, sender);
-      flyMail(ch, sender);
-      return;
-    }
-    // New work: this agent's next messages to the sender are its reports.
-    if (sender && ch.title) {
-      (sender.handedTo ??= new Map()).set(ch.title.trim().toLowerCase(), now);
-    }
-    const { note } = mailHandover(ch, from, null);
+    const { note } = mailHandover(ch, giver, null);
     const mode = getMailMode();
     if (mode === 'carry' && sender && this.canWalkMail(sender)) {
       const queued = (sender.mailRun?.length ?? 0) + (sender.mailVisit ? 1 : 0);
@@ -1023,12 +1019,13 @@ export class OfficeState {
     const now = this.workFromById.get(ch.id);
     const before = ch.workFrom;
     ch.workFrom = now;
-    // Work that just closed (answered, the turn over): its note goes back.
-    if (before && now && !this.restoreNotesFor.has(ch.id)) {
-      const open = new Set(now.map((g) => g.trim().toLowerCase()));
-      for (const giver of before) {
-        if (!open.has(giver.trim().toLowerCase())) this.returnWork(ch, giver);
-      }
+    // Work just given: carried over. Work just closed (answered, the turn over): back.
+    if (before && now && before !== now && !this.restoreNotesFor.has(ch.id)) {
+      const key = (g: string) => g.trim().toLowerCase();
+      const was = new Set(before.map(key));
+      const open = new Set(now.map(key));
+      for (const giver of now) if (!was.has(key(giver))) this.assignWork(ch, giver);
+      for (const giver of before) if (!open.has(key(giver))) this.returnWork(ch, giver);
     }
     if (!this.restoreNotesFor.has(ch.id)) return;
     this.restoreNotesFor.delete(ch.id);

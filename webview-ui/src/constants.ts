@@ -315,9 +315,6 @@ export const MAIL_EDGE = '#8a5a3a';
 export const MAIL_LABEL_COLOR = '#f0c070';
 /** Seconds a walker stands by the other agent, handing over (or taking) the work. */
 export const MAIL_VISIT_WAIT_SEC = 1.5;
-/** Messages back from an agent this one handed work to within this long are reports
- *  (the server's REPORT_WINDOW_MS too: server/src/workFrom.ts). */
-export const MAIL_REPORT_WINDOW_MS = 60 * 60 * 1000;
 /** A walker with this many notes still to carry hands further ones over at once. */
 export const MAIL_RUN_MAX = 3;
 /** A review note stays at least this long, however short the turn that reads it. */

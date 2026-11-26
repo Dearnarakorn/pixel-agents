@@ -28,7 +28,7 @@ import {
 } from './constants.js';
 import { getHookProvider } from './transcriptParser.js';
 import type { AgentState } from './types.js';
-import { openWork } from './workFrom.js';
+import { openWork, setWorkLeads } from './workFrom.js';
 
 // ── Titles ───────────────────────────────────────────────────
 
@@ -65,6 +65,8 @@ export function agentTitles(store: AgentStateStore): Record<number, string> {
  * `store.broadcast`; call once at startup.
  */
 export function attachTitlesToStatus(store: AgentStateStore): void {
+  // Who leads (zones.json leadZones) decides which way work goes between sessions.
+  setWorkLeads((agent) => isLeadAgent(agent as AgentState), isLeadTitle);
   const broadcast = store.broadcast.bind(store);
   store.broadcast = (message: Record<string, unknown>): void => {
     if (message.type === 'agentStatus' && typeof message.id === 'number') {
@@ -190,6 +192,9 @@ let zoneRulesReadAt = 0;
 /** Zones whose agents sleep at their desks instead of walking to a bed
  *  (zones.json `deskSleepZones`), read with the rules. */
 let deskSleepZones = new Set<string>();
+/** Zones of the team's leads (zones.json `leadZones`): their messages are work for
+ *  the receiver, messages to them are reports (workFrom.ts). */
+let leadZones = new Set<string>();
 
 /**
  * The rules in ~/.pixel-agents/zones.json: `{ "rules": [[regex, zone], ...] }`.
@@ -207,16 +212,22 @@ function readZoneRules(): ZoneRule[] {
   zoneRulesReadAt = now;
   const rules: ZoneRule[] = [];
   const atDesk = new Set<string>();
+  const leads = new Set<string>();
   try {
     const file = path.join(os.homedir(), PIXEL_AGENTS_DIR, ZONES_FILE_NAME);
     const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf8'));
     const record =
       parsed && typeof parsed === 'object'
-        ? (parsed as { rules?: unknown; deskSleepZones?: unknown })
+        ? (parsed as { rules?: unknown; deskSleepZones?: unknown; leadZones?: unknown })
         : undefined;
     if (Array.isArray(record?.deskSleepZones)) {
       for (const zone of record.deskSleepZones) {
         if (typeof zone === 'string') atDesk.add(zone);
+      }
+    }
+    if (Array.isArray(record?.leadZones)) {
+      for (const zone of record.leadZones) {
+        if (typeof zone === 'string') leads.add(zone);
       }
     }
     const list = record?.rules;
@@ -239,7 +250,22 @@ function readZoneRules(): ZoneRule[] {
   }
   zoneRules = rules;
   deskSleepZones = atDesk;
+  leadZones = leads;
   return rules;
+}
+
+/** An agent in one of zones.json `leadZones`. */
+export function isLeadAgent(agent: AgentState): boolean {
+  const zone = agentZone(agent);
+  return zone !== undefined && leadZones.has(zone);
+}
+
+/** A session named `title` would be placed in a lead zone (by the "title:" rules). */
+export function isLeadTitle(title: string): boolean {
+  for (const [pattern, zone, target] of readZoneRules()) {
+    if (target === 'title' && pattern.test(title)) return leadZones.has(zone);
+  }
+  return false;
 }
 
 /** True when the agent's zone is listed in zones.json `deskSleepZones`: it

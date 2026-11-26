@@ -343,9 +343,6 @@ export interface Character extends Blinker {
   /** Sessions whose work this agent hasn't answered yet (the server's account):
    *  its label says "from …" while any is open, across turns and page loads. */
   workFrom?: string[];
-  /** Agents this one handed work to (their titles, lower case) and when (ms): their
-   *  messages back within MAIL_REPORT_WINDOW_MS are reports, not new work. */
-  handedTo?: Map<string, number>;
   /** Notes this agent still has to carry, in order (it walks them one by one). */
   mailRun?: MailErrand[];
   /** Notes on this agent's desk: work given to it, and work back for review (its tray). */

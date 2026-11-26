@@ -486,10 +486,10 @@ export function useExtensionMessages(
         os.setDeskAgents(
           Object.keys((msg.deskAgents || {}) as Record<string, boolean>).map(Number),
         );
-        // Work still open per agent: its label, and its desk notes rebuilt.
-        for (const [id, givers] of Object.entries((msg.workFrom || {}) as Record<string, string[]>)) {
-          os.setAgentWorkFrom(Number(id), givers, true);
-        }
+        // Work still open per agent (none for those not listed): its label, and its
+        // desk notes rebuilt; work given or closed from here on is walked over.
+        const openWork = (msg.workFrom || {}) as Record<string, string[]>;
+        for (const id of incoming) os.setAgentWorkFrom(id, openWork[id] ?? [], true);
         for (const [id, since] of Object.entries((msg.idleSince || {}) as Record<string, number>)) {
           os.idleSince.set(Number(id), since);
         }

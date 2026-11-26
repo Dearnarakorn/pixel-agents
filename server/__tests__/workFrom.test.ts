@@ -12,6 +12,7 @@ import {
   openWork,
   REPORT_WINDOW_MS,
   seedWorkFrom,
+  setWorkLeads,
   WORK_OPEN_MAX_MS,
 } from '../src/workFrom.js';
 
@@ -99,6 +100,29 @@ describe('work handed between sessions', () => {
       ),
     ).toBe('Messaging another session');
     expect(messagingStatus('Read', { file_path: 'x' }, claudeProvider)).toBeUndefined();
+  });
+
+  it('a lead gives work and gets reports, however the messages went before', () => {
+    setWorkLeads(
+      (a) => (a as { lead?: boolean }).lead === true,
+      (name) => name === 'Boss',
+    );
+    try {
+      // Engineer's report reached Boss first (Boss's hand-out before the tail read).
+      const boss = { lead: true } as unknown as Pick<AgentState, 'workFrom' | 'sentTo' | 'turnActive'>;
+      noteWorkGiven(boss, prompt('Engineer', 'local_eng'), claudeProvider);
+      expect(openWork(boss)).toEqual([]);
+      // Engineer had messaged Boss (so Boss would look like its report) - still work.
+      const eng = {} as Pick<AgentState, 'workFrom' | 'sentTo' | 'turnActive'>;
+      noteWorkAnswered(eng, reply(BOSS), claudeProvider);
+      noteWorkGiven(eng, prompt('Boss', BOSS), claudeProvider);
+      expect(openWork(eng)).toEqual(['Boss']);
+    } finally {
+      setWorkLeads(
+        () => false,
+        () => false,
+      );
+    }
   });
 
   it('lets unanswered work go after 30 minutes, but not while the agent works', () => {

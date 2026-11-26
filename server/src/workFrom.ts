@@ -24,6 +24,23 @@ export const REPORT_WINDOW_MS = 60 * 60 * 1000;
 
 type WorkState = Pick<AgentState, 'workFrom' | 'sentTo'>;
 
+/**
+ * Leads (zones.json `leadZones`, set by officeExtras): a lead's messages are
+ * always work for the receiver, and messages to a lead are always reports. Between
+ * two sessions that message each other back and forth, the content can't say who
+ * gives the work; the team's lead can.
+ */
+let leadAgent: (agent: WorkState) => boolean = () => false;
+let leadName: (name: string) => boolean = () => false;
+
+export function setWorkLeads(
+  isLeadAgent: (agent: WorkState) => boolean,
+  isLeadName: (name: string) => boolean,
+): void {
+  leadAgent = isLeadAgent;
+  leadName = isLeadName;
+}
+
 /** Session names by address, learnt from every message seen (address → from-name). */
 const sessionNames = new Map<string, string>();
 
@@ -55,10 +72,14 @@ export function noteWorkGiven(
   const address = from ? provider?.messageSenderAddress?.(promptText) : undefined;
   if (!from || !address) return;
   sessionNames.set(address, from);
-  // From a session this agent sent work to lately: its report back ("got it", then
-  // "done": every one of them), not new work.
-  const handedAt = agent.sentTo?.get(address);
-  if (handedAt !== undefined && at - handedAt <= REPORT_WINDOW_MS) return;
+  // To a lead: a report. From a lead: work.
+  if (leadAgent(agent)) return;
+  if (!leadName(from)) {
+    // From a session this agent sent work to lately: its report back ("got it",
+    // then "done": every one of them), not new work.
+    const handedAt = agent.sentTo?.get(address);
+    if (handedAt !== undefined && at - handedAt <= REPORT_WINDOW_MS) return;
+  }
   agent.workFrom ??= new Map();
   agent.workFrom.set(from, { address, at });
 }
