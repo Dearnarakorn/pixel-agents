@@ -323,7 +323,10 @@ export function ToolOverlay({
 
         // Who it is working for: the work still open (until it answers the giver),
         // else whoever started this turn.
-        const fromNames = ch.workFrom?.length ? ch.workFrom.join(', ') : ch.mailFrom;
+        // The server's account wins once it has sent one (an answered giver drops off
+        // at once, mid-turn); before that, this turn's sender.
+        const fromNames =
+          ch.workFrom !== undefined ? ch.workFrom.join(', ') || undefined : ch.mailFrom;
         // Work back from others, waiting on this agent's tray.
         const reviewCount = ch.deskNotes?.filter((n) => n.kind === 'review').length ?? 0;
 
