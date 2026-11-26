@@ -107,6 +107,14 @@ export function cancelPermissionTimer(
   }
 }
 
+/** Whether a permission wait may be guessed from a silent running tool (the
+ *  runtime says no while hooks report real permission prompts). */
+let mayGuessPermission: () => boolean = () => true;
+
+export function setPermissionGuessGate(gate: () => boolean): void {
+  mayGuessPermission = gate;
+}
+
 export function startPermissionTimer(
   agentId: number,
   agents: AgentStateStore,
@@ -114,6 +122,7 @@ export function startPermissionTimer(
   permissionExemptTools: ReadonlySet<string>,
 ): void {
   cancelPermissionTimer(agentId, permissionTimers);
+  if (!mayGuessPermission()) return;
   const timer = setTimeout(() => {
     permissionTimers.delete(agentId);
     const agent = agents.get(agentId);

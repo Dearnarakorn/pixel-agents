@@ -313,10 +313,21 @@ export const MAIL_PAPER = '#f8f4e8';
 export const MAIL_EDGE = '#8a5a3a';
 /** The "from <name>" line on a receiver's label. */
 export const MAIL_LABEL_COLOR = '#f0c070';
-/** Seconds the receiver stands by the sender, taking the work, before walking back. */
-export const MAIL_VISIT_WAIT_SEC = 2.5;
-/** A desk note stays at least this long, however short the turn it marks. */
+/** Seconds a walker stands by the other agent, handing over (or taking) the work. */
+export const MAIL_VISIT_WAIT_SEC = 1.5;
+/** A walker with this many notes still to carry hands further ones over at once. */
+export const MAIL_RUN_MAX = 3;
+/** A review note stays at least this long, however short the turn that reads it. */
 export const MAIL_NOTE_MIN_SEC = 15;
+/** Notes nobody answers go by themselves after this many minutes (Settings). */
+export const MAIL_NOTE_TIMEOUT_DEFAULT_MIN = 20;
+export const MAIL_NOTE_TIMEOUT_CHOICES_MIN = [15, 20, 30, 60] as const;
+/** Several notes on one desk lie this far apart (world px); the tray stacks this high. */
+export const MAIL_NOTE_SPREAD_PX = 3;
+export const MAIL_TRAY_STACK_PX = 1;
+export const MAIL_TRAY_MAX_DRAWN = 5;
+export const MAIL_MODE_STORAGE_KEY = 'pixel-agents.mailMode';
+export const MAIL_TIMEOUT_STORAGE_KEY = 'pixel-agents.mailNoteTimeoutMin';
 /** Note colours, one per sender (picked by name, so a sender keeps its colour). */
 export const MAIL_NOTE_COLORS = ['#f6d55c', '#f49ac2', '#8fd3f4', '#9be59b', '#f7b267', '#c3a6f7'] as const;
 /** The note's shaded edge and scribbled lines. */

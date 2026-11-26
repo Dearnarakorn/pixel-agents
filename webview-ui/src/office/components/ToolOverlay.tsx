@@ -321,6 +321,9 @@ export function ToolOverlay({
           dotColor = 'var(--color-status-active)';
         }
 
+        // Work back from others, waiting on this agent's tray.
+        const reviewCount = ch.deskNotes?.filter((n) => n.kind === 'review').length ?? 0;
+
         // Team info
         const teamRoleLabel = ch.isTeamLead ? 'LEAD' : ch.agentName || null;
 
@@ -378,6 +381,16 @@ export function ToolOverlay({
                     >
                       <PixelIcon name="mail" scale={1} />
                       {`from ${ch.mailFrom}`}
+                    </span>
+                  )}
+                  {!isSub && reviewCount > 0 && (
+                    <span
+                      className="flex items-center gap-4 overflow-hidden text-ellipsis leading-none"
+                      style={{ fontSize: '18px', color: MAIL_LABEL_COLOR }}
+                      data-testid="mail-review"
+                    >
+                      <PixelIcon name="mail" scale={1} />
+                      {`${reviewCount} back to check`}
                     </span>
                   )}
                   <span

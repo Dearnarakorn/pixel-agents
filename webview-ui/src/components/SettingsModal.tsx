@@ -2,7 +2,14 @@ import { type CSSProperties, useRef, useState } from 'react';
 
 import { isCameraFollowEnabled, setCameraFollowEnabled } from '../cameraFollow.js';
 import { readStoredCatHeavyNames, storeCatHeavyNames } from '../characters/catHeavySetting.js';
-import { NOTIFICATION_VOLUME_STEP_PCT } from '../constants.js';
+import {
+  readStoredMailMode,
+  readStoredMailTimeoutMin,
+  storeMailMode,
+  storeMailTimeoutMin,
+} from '../characters/mailSetting.js';
+import { MAIL_NOTE_TIMEOUT_CHOICES_MIN, NOTIFICATION_VOLUME_STEP_PCT } from '../constants.js';
+import type { MailMode } from '../office/engine/mail.js';
 import { isDesktopNotifyEnabled, setDesktopNotifyEnabled } from '../desktopNotify.js';
 import { officeRadio } from '../music/musicEngine.js';
 import { useOfficeRadio } from '../music/useOfficeRadio.js';
@@ -92,6 +99,8 @@ export function SettingsModal({
   const [desktopNotify, setDesktopNotify] = useState(isDesktopNotifyEnabled);
   const officeTheme = useOfficeTheme();
   const [heavyNames, setHeavyNames] = useState(readStoredCatHeavyNames);
+  const [mailMode, setMailModeState] = useState(readStoredMailMode);
+  const [mailTimeout, setMailTimeoutState] = useState(readStoredMailTimeoutMin);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [assetDirDraft, setAssetDirDraft] = useState('');
   // Usage Bars: installing rewrites the user's status line, so it asks first
@@ -293,6 +302,46 @@ export function SettingsModal({
             />
           </label>
         )}
+        <label
+          className="flex items-center gap-8 w-full py-6 px-10"
+          title="How work one session sends another shows in the office (this browser only)"
+        >
+          <span className="shrink-0">Handing Over Work</span>
+          <select
+            value={mailMode}
+            aria-label="How handed-over work shows"
+            className="flex-1 min-w-0 text-xs py-2 px-4 bg-bg border-2 border-border rounded-none text-text"
+            onChange={(e) => {
+              const next = e.target.value as MailMode;
+              setMailModeState(next);
+              storeMailMode(next);
+            }}
+          >
+            <option value="carry">Sender carries a note to the desk</option>
+            <option value="visit">Receiver walks over to take it</option>
+            <option value="envelope">Envelope only</option>
+          </select>
+        </label>
+        <label
+          className="flex items-center gap-8 w-full py-6 px-10"
+          title="Notes on desks that nobody answers go by themselves after this long (this browser only)"
+        >
+          <span className="shrink-0">Notes Expire</span>
+          <select
+            value={mailTimeout}
+            aria-label="Minutes before an unanswered note goes"
+            className="flex-1 min-w-0 text-xs py-2 px-4 bg-bg border-2 border-border rounded-none text-text"
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              setMailTimeoutState(next);
+              storeMailTimeoutMin(next);
+            }}
+          >
+            {MAIL_NOTE_TIMEOUT_CHOICES_MIN.map((m) => (
+              <option key={m} value={m}>{`after ${m} min`}</option>
+            ))}
+          </select>
+        </label>
         <Checkbox
           label="Music Player"
           title="The office radio's player, bottom of the office"

@@ -38,7 +38,10 @@ import {
   HOVERED_OUTLINE_ALPHA,
   MAIL_EDGE,
   MAIL_NOTE_SHADE,
+  MAIL_NOTE_SPREAD_PX,
   MAIL_PAPER,
+  MAIL_TRAY_MAX_DRAWN,
+  MAIL_TRAY_STACK_PX,
   OUTLINE_Z_SORT_OFFSET,
   ROTATE_BUTTON_BG,
   ROTATE_BUTTON_HOVER_BG,
@@ -499,13 +502,30 @@ export function renderScene(
       });
     }
 
-    // The note on this agent's desk while mail's work runs.
-    const note = ch.mailNote;
-    if (note) {
-      const nx = offsetX + note.x * zoom;
-      const ny = offsetY + note.y * zoom;
-      const color = note.color;
-      drawables.push({ zY: note.zY, draw: (c) => drawDeskNote(c, nx, ny, color, zoom) });
+    // Notes on this agent's desk: work it was given (side by side), and its own
+    // work back for review (stacked on a tray to the left).
+    const spot = ch.deskSpot;
+    if (spot && ch.deskNotes?.length) {
+      let work = 0;
+      let review = 0;
+      for (const n of ch.deskNotes) {
+        let nx: number;
+        let ny: number;
+        if (n.kind === 'work') {
+          nx = spot.x + work * MAIL_NOTE_SPREAD_PX;
+          ny = spot.y - work * MAIL_NOTE_SPREAD_PX;
+          work++;
+        } else {
+          if (review >= MAIL_TRAY_MAX_DRAWN) continue;
+          nx = spot.x - MAIL_NOTE[0].length - MAIL_NOTE_SPREAD_PX;
+          ny = spot.y - review * MAIL_TRAY_STACK_PX;
+          review++;
+        }
+        const sx = offsetX + nx * zoom;
+        const sy = offsetY + ny * zoom;
+        const color = n.color;
+        drawables.push({ zY: spot.zY, draw: (c) => drawDeskNote(c, sx, sy, color, zoom) });
+      }
     }
 
     // Mail from another session on its way to this agent: over everything.

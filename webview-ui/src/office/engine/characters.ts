@@ -386,7 +386,7 @@ export function updateCharacter(
  * One frame of a mail visit (mail.ts): walk to the tile beside the sender, stand
  * there facing it for the visit's wait, then hand back to the usual FSM (an
  * active agent then walks to its seat). True while the visit owns the frame;
- * false (and the visit dropped) when the tile can't be reached.
+ * false when the tile can't be reached (the visit then ends next frame, as done).
  */
 function runMailVisit(
   ch: Character,
@@ -439,7 +439,10 @@ function runMailVisit(
       blockedTiles,
     );
     if (!at && rest.length === 0 && !(from && from.col === visit.col && from.row === visit.row)) {
-      ch.mailVisit = undefined;
+      // Can't get there: count it as arrived and done, so a carried note is
+      // still laid (officeState) and the walker goes on.
+      visit.arrived = true;
+      visit.waitSec = 0;
       return false;
     }
     ch.path = from ? [from, ...rest] : rest;

@@ -16,6 +16,8 @@ import {
   MAIL_NOTE_RISE_PX,
   MAIL_NOTE_SIDE_PX,
   MAIL_NOTE_Z_LIFT,
+  MAIL_RUN_MAX,
+  MAIL_VISIT_WAIT_SEC,
   MAX_PET_ID_LENGTH,
   PET_HIT_HALF_WIDTH,
   PET_HIT_HEIGHT,
@@ -63,8 +65,12 @@ import {
   deskTileOf,
   endMailTurn,
   findMailSender,
-  type MailPlan,
+  flyMail,
+  getMailMode,
+  layNote,
+  mailHandover,
   receiveMail,
+  takeNote,
 } from './mail.js';
 import { advanceMatrixEffect, startMatrixEffect } from './matrixEffectState.js';
 import { createPet, updatePet } from './petEntity.js';
@@ -807,56 +813,123 @@ export class OfficeState {
     if (ch) ch.title = title;
   }
 
-  /** A turn started from `from`'s message ('' = the user's prompt): fly mail from
-   *  the character titled `from` (from above when none is here) and label the agent. */
+  /**
+   * A turn started from `from`'s message ('' = the user's prompt). The work
+   * changes hands (mail.ts): by default the sender walks a note over to this
+   * agent's desk (or carries back the note this agent gave it, onto this agent's
+   * review tray); a sender asleep, not here, or with a long queue hands it over at
+   * once, the envelope flying instead.
+   */
   receiveMail(agentId: number, from: string): void {
     const ch = this.characters.get(agentId);
     if (!ch) return;
-    const sender = from ? findMailSender(this.characters.values(), from, agentId) : null;
-    receiveMail(ch, from, sender, from ? this.mailPlan(ch, sender) : {});
-  }
-
-  /** Where `ch` stands to take mail from `sender` (the reachable tile beside it with
-   *  the shortest walk), and where the note goes on `ch`'s desk. */
-  private mailPlan(ch: Character, sender: Character | null): MailPlan {
-    const plan: MailPlan = {};
-    const seat = ch.seatId ? this.seats.get(ch.seatId) : undefined;
-    if (seat) {
-      const desk = deskTileOf(seat);
-      const x = desk.col * TILE_SIZE + TILE_SIZE / 2 + MAIL_NOTE_SIDE_PX;
-      const y = desk.row * TILE_SIZE + TILE_SIZE / 2 - MAIL_NOTE_RISE_PX;
-      // In front of whatever is drawn where it lies (the table, a laptop on it):
-      // a big table sorts by its own bottom edge, far below this desk tile's.
-      let zY = (desk.row + 1) * TILE_SIZE + MAIL_NOTE_Z_LIFT;
-      for (const f of this.furniture) {
-        const w = f.sprite[0]?.length ?? 0;
-        if (x >= f.x && x < f.x + w && y >= f.y && y < f.y + f.sprite.length) {
-          zY = Math.max(zY, f.zY + MAIL_NOTE_Z_LIFT);
-        }
+    receiveMail(ch, from);
+    if (!from) return;
+    const sender = findMailSender(this.characters.values(), from, agentId);
+    this.refreshDeskSpot(ch);
+    if (sender) this.refreshDeskSpot(sender);
+    const { note, returning } = mailHandover(ch, from, sender);
+    const mode = getMailMode();
+    if (mode === 'carry' && sender && this.canWalkMail(sender)) {
+      const queued = (sender.mailRun?.length ?? 0) + (sender.mailVisit ? 1 : 0);
+      if (queued < MAIL_RUN_MAX) {
+        sender.mailRun = [
+          ...(sender.mailRun ?? []),
+          { receiverId: ch.id, note, takeId: returning?.id },
+        ];
+        if (!sender.mailVisit) this.startNextMailErrand(sender);
+        return;
       }
-      plan.note = { x, y, zY };
     }
-    if (sender && !ch.isSubagent && !ch.matrixEffect) {
-      let best: { col: number; row: number; dir: Direction; steps: number } | null = null;
-      this.withOwnSeatUnblocked(ch, () => {
-        for (const t of besideTiles({ col: sender.tileCol, row: sender.tileRow })) {
-          if (!isWalkable(t.col, t.row, this.tileMap, this.blockedTiles)) continue;
-          const here = t.col === ch.tileCol && t.row === ch.tileRow;
-          const steps = here
-            ? 0
-            : findPath(ch.tileCol, ch.tileRow, t.col, t.row, this.tileMap, this.blockedTiles)
-                .length;
-          if (!here && steps === 0) continue;
-          if (!best || steps < best.steps) best = { ...t, steps };
-        }
-      });
-      const found = best as { col: number; row: number; dir: Direction; steps: number } | null;
-      if (found) plan.visit = { col: found.col, row: found.row, dir: found.dir };
+    if (returning && sender) takeNote(sender, returning.id);
+    layNote(ch, note);
+    flyMail(ch, sender);
+    if (mode === 'visit' && sender && this.canWalkMail(ch)) {
+      const tile = this.besideFor(ch, sender);
+      if (tile) ch.mailVisit = { ...tile, waitSec: MAIL_VISIT_WAIT_SEC, arrived: false };
     }
-    return plan;
   }
 
-  /** The agent's turn ended: its "from" label goes. */
+  /** Can walk an errand now: a main agent, awake and up, not mid spawn effect. */
+  private canWalkMail(ch: Character): boolean {
+    return !ch.isSubagent && !ch.sleeping && !ch.inBed && !ch.matrixEffect;
+  }
+
+  /** The walker's next note: off to the tile beside its receiver (picking a returned
+   *  note up off its own desk as it sets off). One it can't reach is handed over
+   *  at once, and so is one for a receiver no longer here (dropped). */
+  private startNextMailErrand(walker: Character): void {
+    for (let errand = walker.mailRun?.shift(); errand; errand = walker.mailRun?.shift()) {
+      const receiver = this.characters.get(errand.receiverId);
+      if (errand.takeId !== undefined) takeNote(walker, errand.takeId);
+      if (!receiver) continue;
+      const tile = this.canWalkMail(walker) ? this.besideFor(walker, receiver) : null;
+      if (!tile) {
+        this.refreshDeskSpot(receiver);
+        layNote(receiver, errand.note);
+        flyMail(receiver, walker);
+        continue;
+      }
+      walker.mailVisit = { ...tile, waitSec: MAIL_VISIT_WAIT_SEC, arrived: false, errand };
+      return;
+    }
+  }
+
+  /** Each frame: a walker at its receiver lays the note; one done goes on to the next. */
+  private tickMailErrands(ch: Character): void {
+    const visit = ch.mailVisit;
+    if (visit?.arrived && visit.errand) {
+      const receiver = this.characters.get(visit.errand.receiverId);
+      if (receiver) {
+        this.refreshDeskSpot(receiver);
+        layNote(receiver, visit.errand.note);
+      }
+      visit.errand = undefined;
+    }
+    if (!ch.mailVisit && ch.mailRun?.length) this.startNextMailErrand(ch);
+  }
+
+  /** The reachable tile beside `target` with the shortest walk for `walker`, facing it. */
+  private besideFor(
+    walker: Character,
+    target: Character,
+  ): { col: number; row: number; dir: Direction } | null {
+    let best: { col: number; row: number; dir: Direction; steps: number } | null = null;
+    this.withOwnSeatUnblocked(walker, () => {
+      for (const t of besideTiles({ col: target.tileCol, row: target.tileRow })) {
+        if (!isWalkable(t.col, t.row, this.tileMap, this.blockedTiles)) continue;
+        const here = t.col === walker.tileCol && t.row === walker.tileRow;
+        const steps = here
+          ? 0
+          : findPath(walker.tileCol, walker.tileRow, t.col, t.row, this.tileMap, this.blockedTiles)
+              .length;
+        if (!here && steps === 0) continue;
+        if (!best || steps < best.steps) best = { ...t, steps };
+      }
+    });
+    const found = best as { col: number; row: number; dir: Direction; steps: number } | null;
+    return found ? { col: found.col, row: found.row, dir: found.dir } : null;
+  }
+
+  /** Where `ch`'s desk notes lie: on the desk its seat faces, in front of whatever is
+   *  drawn there (a big table sorts by its own bottom edge, rows below this tile). */
+  private refreshDeskSpot(ch: Character): void {
+    const seat = ch.seatId ? this.seats.get(ch.seatId) : undefined;
+    if (!seat) return;
+    const desk = deskTileOf(seat);
+    const x = desk.col * TILE_SIZE + TILE_SIZE / 2 + MAIL_NOTE_SIDE_PX;
+    const y = desk.row * TILE_SIZE + TILE_SIZE / 2 - MAIL_NOTE_RISE_PX;
+    let zY = (desk.row + 1) * TILE_SIZE + MAIL_NOTE_Z_LIFT;
+    for (const f of this.furniture) {
+      const w = f.sprite[0]?.length ?? 0;
+      if (x >= f.x && x < f.x + w && y >= f.y && y < f.y + f.sprite.length) {
+        zY = Math.max(zY, f.zY + MAIL_NOTE_Z_LIFT);
+      }
+    }
+    ch.deskSpot = { x, y, zY };
+  }
+
+  /** The agent's turn ended: its "from" label goes, and review notes it read go. */
   endMailTurn(agentId: number): void {
     const ch = this.characters.get(agentId);
     if (ch) endMailTurn(ch);
@@ -1600,6 +1673,7 @@ export class OfficeState {
             cat,
           ),
         );
+        this.tickMailErrands(ch);
       }
 
       // Tick bubble timer for waiting bubbles

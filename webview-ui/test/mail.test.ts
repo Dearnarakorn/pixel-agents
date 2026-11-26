@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { test } from 'vitest';
+import { afterEach, test } from 'vitest';
 
 import {
   MAIL_DROP_PX,
@@ -8,24 +8,39 @@ import {
   MAIL_HEAD_RISE_PX,
   MAIL_NOTE_COLORS,
   MAIL_NOTE_MIN_SEC,
-  MAIL_VISIT_WAIT_SEC,
+  MAIL_NOTE_TIMEOUT_DEFAULT_MIN,
 } from '../src/constants.js';
 import {
   besideTiles,
   deskTileOf,
   endMailTurn,
   findMailSender,
+  flyMail,
+  getMailMode,
+  layNote,
   MAIL_ENVELOPE,
   MAIL_NOTE,
+  mailHandover,
   mailNoteColor,
   mailPoint,
   receiveMail,
+  setMailMode,
+  setMailNoteTimeoutMin,
+  takeNote,
   tickMail,
 } from '../src/office/engine/mail.js';
-import { Direction } from '../src/office/types.js';
+import type { Character, DeskNote } from '../src/office/types.js';
 
-type Mailbox = Parameters<typeof receiveMail>[0];
-const at = (x: number, y: number): Mailbox => ({ x, y });
+type Agent = Pick<
+  Character,
+  'x' | 'y' | 'title' | 'isActive' | 'mailFrom' | 'mailFlightSec' | 'mailFromX' | 'mailFromY' | 'deskNotes'
+>;
+const agent = (title: string, isActive = true): Agent => ({ x: 0, y: 0, title, isActive });
+
+afterEach(() => {
+  setMailMode('carry');
+  setMailNoteTimeoutMin(MAIL_NOTE_TIMEOUT_DEFAULT_MIN);
+});
 
 test('the sender is the main agent titled with the name, ignoring case and spaces', () => {
   const cast = [
@@ -39,85 +54,101 @@ test('the sender is the main agent titled with the name, ignoring case and space
   assert.equal(findMailSender(cast, '', 1), null);
 });
 
-test('mail flies from the sender to the receiver, then lands', () => {
-  const rx = at(100, 100);
-  receiveMail(rx, 'Boss', { x: 20, y: 60 });
-  assert.equal(rx.mailFrom, 'Boss');
-  const start = mailPoint(rx)!;
-  assert.deepEqual(start, { x: 20, y: 60 - MAIL_HEAD_RISE_PX });
-  tickMail(rx, MAIL_FLIGHT_SEC / 2);
-  const mid = mailPoint(rx)!;
-  assert.ok(mid.x > 20 && mid.x < 100);
-  tickMail(rx, MAIL_FLIGHT_SEC / 2 + 0.01);
+test('assign, return, review: the note goes there and back in the giver colour', () => {
+  const boss = agent('Boss');
+  const sec = agent('Secretary');
+  // Boss -> Secretary: a new work note in Boss's colour for Secretary's desk.
+  const give = mailHandover(sec, 'Boss', boss);
+  assert.equal(give.returning, null);
+  assert.equal(give.note.kind, 'work');
+  assert.equal(give.note.color, mailNoteColor('Boss'));
+  layNote(sec, give.note);
+  // Secretary -> Boss: Boss's note comes back off Secretary's desk, for review.
+  const back = mailHandover(boss, 'Secretary', sec);
+  assert.equal(back.returning?.id, give.note.id);
+  assert.equal(back.note.kind, 'review');
+  assert.equal(back.note.color, mailNoteColor('Boss'));
+  takeNote(sec, back.returning!.id);
+  layNote(boss, back.note);
+  assert.deepEqual(sec.deskNotes, []);
+  assert.equal(boss.deskNotes?.length, 1);
+});
+
+test('a message with no work out is new work, even between the same pair', () => {
+  const a = agent('Analyst');
+  const d = agent('Designer');
+  const first = mailHandover(d, 'Analyst', a); // Analyst gives Designer work
+  layNote(d, first.note);
+  const more = mailHandover(d, 'Analyst', a); // and more: Analyst's desk holds none of Designer's
+  assert.equal(more.returning, null);
+  assert.equal(more.note.kind, 'work');
+});
+
+test("a review note goes when its reader's turn ends, after showing a while", () => {
+  const boss = agent('Boss', true);
+  layNote(boss, mailHandover(boss, 'Secretary', null).note); // work from someone not here
+  const review: DeskNote = { ...mailHandover(boss, 'X', null).note, kind: 'review' };
+  layNote(boss, review);
+  endMailTurn(boss); // read, but not shown long enough yet
+  assert.equal(boss.deskNotes?.length, 2);
+  tickMail(boss, MAIL_NOTE_MIN_SEC + 0.1);
+  assert.deepEqual(
+    boss.deskNotes?.map((n) => n.kind),
+    ['work'],
+  );
+});
+
+test('a review note arriving after the turn ended counts as read', () => {
+  const idle = agent('Boss', false);
+  const review: DeskNote = { ...mailHandover(idle, 'X', null).note, kind: 'review' };
+  layNote(idle, review);
+  assert.equal(review.read, true);
+  tickMail(idle, MAIL_NOTE_MIN_SEC + 0.1);
+  assert.deepEqual(idle.deskNotes, []);
+});
+
+test('work nobody answers goes after the timeout (a setting)', () => {
+  setMailNoteTimeoutMin(15);
+  const d = agent('Designer');
+  layNote(d, mailHandover(d, 'Boss', null).note);
+  tickMail(d, 14 * 60);
+  assert.equal(d.deskNotes?.length, 1);
+  tickMail(d, 61);
+  assert.deepEqual(d.deskNotes, []);
+});
+
+test('the label follows the turn; the user prompting clears it', () => {
+  const d = agent('Designer');
+  receiveMail(d, 'Boss');
+  assert.equal(d.mailFrom, 'Boss');
+  receiveMail(d, '');
+  assert.equal(d.mailFrom, undefined);
+  receiveMail(d, 'Boss');
+  endMailTurn(d);
+  assert.equal(d.mailFrom, undefined);
+});
+
+test('mail flies from the sender, or drops in from above', () => {
+  const rx = { ...agent('Rx'), x: 100, y: 100 };
+  flyMail(rx, { x: 20, y: 60 });
+  assert.deepEqual(mailPoint(rx), { x: 20, y: 60 - MAIL_HEAD_RISE_PX });
+  tickMail(rx, MAIL_FLIGHT_SEC + 0.01);
   assert.equal(mailPoint(rx), null);
-  assert.equal(rx.mailFrom, 'Boss'); // the label stays until the turn ends
-  endMailTurn(rx);
-  assert.equal(rx.mailFrom, undefined);
+  flyMail(rx, null);
+  assert.deepEqual(mailPoint(rx), { x: 100, y: 100 - MAIL_HEAD_RISE_PX - MAIL_DROP_PX });
 });
 
-test('mail from a session not in the office drops in from above', () => {
-  const rx = at(50, 80);
-  receiveMail(rx, 'Ghost', null);
-  assert.deepEqual(mailPoint(rx), { x: 50, y: 80 - MAIL_HEAD_RISE_PX - MAIL_DROP_PX });
+test('modes: carry by default, unknown ones fall back to carry', () => {
+  assert.equal(getMailMode(), 'carry');
+  setMailMode('visit');
+  assert.equal(getMailMode(), 'visit');
+  setMailMode('nonsense' as never);
+  assert.equal(getMailMode(), 'carry');
 });
 
-test("the user's own prompt clears the label and sends no mail", () => {
-  const rx = at(0, 0);
-  rx.mailFrom = 'Boss';
-  receiveMail(rx, '', null);
-  assert.equal(rx.mailFrom, undefined);
-  assert.equal(mailPoint(rx), null);
-});
-
-test('mail from someone here plans a visit and a desk note in the sender colour', () => {
-  const rx = at(100, 100);
-  receiveMail(rx, 'Boss', { x: 20, y: 60 }, {
-    visit: { col: 1, row: 4, dir: Direction.UP },
-    note: { x: 50, y: 40, zY: 48.6 },
-  });
-  assert.deepEqual(rx.mailVisit, {
-    col: 1,
-    row: 4,
-    dir: Direction.UP,
-    waitSec: MAIL_VISIT_WAIT_SEC,
-    arrived: false,
-  });
-  assert.equal(rx.mailNote?.color, mailNoteColor('Boss'));
+test('colours: one per name, from the palette', () => {
   assert.equal(mailNoteColor('Boss'), mailNoteColor(' boss '));
   assert.ok((MAIL_NOTE_COLORS as readonly string[]).includes(mailNoteColor('Designer')));
-});
-
-test('no visit when the sender is not in the office (the note still goes on the desk)', () => {
-  const rx = at(0, 0);
-  receiveMail(rx, 'Ghost', null, {
-    visit: { col: 1, row: 1, dir: Direction.UP },
-    note: { x: 1, y: 1, zY: 1 },
-  });
-  assert.equal(rx.mailVisit, undefined);
-  assert.ok(rx.mailNote);
-});
-
-test('the note stays through the turn and at least MAIL_NOTE_MIN_SEC', () => {
-  const quick = at(0, 0);
-  receiveMail(quick, 'Boss', null, { note: { x: 1, y: 1, zY: 1 } });
-  endMailTurn(quick); // a quick reply
-  assert.ok(quick.mailNote, 'kept for its minimum time');
-  tickMail(quick, MAIL_NOTE_MIN_SEC + 0.1);
-  assert.equal(quick.mailNote, undefined);
-
-  const long = at(0, 0);
-  receiveMail(long, 'Boss', null, { note: { x: 1, y: 1, zY: 1 } });
-  tickMail(long, MAIL_NOTE_MIN_SEC + 5);
-  assert.ok(long.mailNote, 'kept while the turn runs');
-  endMailTurn(long);
-  assert.equal(long.mailNote, undefined);
-});
-
-test('a visit is not called off by the turn ending', () => {
-  const rx = at(0, 0);
-  receiveMail(rx, 'Boss', { x: 5, y: 5 }, { visit: { col: 1, row: 1, dir: Direction.LEFT } });
-  endMailTurn(rx);
-  assert.ok(rx.mailVisit);
 });
 
 test('beside tiles face the middle; the desk is one step the way a seat faces', () => {
@@ -127,17 +158,8 @@ test('beside tiles face the middle; the desk is one step the way a seat faces', 
   }
 });
 
-test('the desk note art is a 7 x 6 block of paper and shade', () => {
-  for (const row of MAIL_NOTE) {
-    assert.equal(row.length, 7);
-    assert.match(row, /^[ps.]+$/);
-  }
+test('the note and envelope art are tidy grids', () => {
+  for (const row of MAIL_NOTE) assert.match(row, /^[ps.]{7}$/);
   assert.equal(MAIL_NOTE.length, 6);
-});
-
-test('the envelope art is a rectangle of edge and paper', () => {
-  for (const row of MAIL_ENVELOPE) {
-    assert.equal(row.length, MAIL_ENVELOPE[0].length);
-    assert.match(row, /^[#o]+$/);
-  }
+  for (const row of MAIL_ENVELOPE) assert.match(row, /^[#o]{9}$/);
 });

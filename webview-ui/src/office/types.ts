@@ -56,6 +56,28 @@ export interface Seat {
   assigned: boolean;
 }
 
+/** A note on an agent's desk (office/engine/mail.ts): work it was given by `from`,
+ *  or its own work back for review. Ages toward the timeout; a read review note
+ *  goes once it has shown `minSec`. */
+export interface DeskNote {
+  id: number;
+  /** Who gave the work (the note keeps that colour, there and back). */
+  from: string;
+  color: string;
+  kind: 'work' | 'review';
+  ageSec: number;
+  minSec: number;
+  /** Review notes: the owner's turn that read them has ended. */
+  read: boolean;
+}
+
+/** A note to carry to another agent's desk; `takeId`: picked off the walker's own desk. */
+export interface MailErrand {
+  receiverId: number;
+  note: DeskNote;
+  takeId?: number;
+}
+
 export interface FurnitureInstance {
   sprite: SpriteData;
   /** Pixel x (top-left) */
@@ -304,13 +326,23 @@ export interface Character extends Blinker {
   mailFlightSec?: number;
   mailFromX?: number;
   mailFromY?: number;
-  /** Mail from a session in the office: walk to the tile beside the sender, stand
-   *  there facing it for `waitSec`, then back to work (characters.ts runMailVisit). */
-  mailVisit?: { col: number; row: number; dir: Direction; waitSec: number; arrived: boolean };
-  /** A note in the sender's colour on this agent's desk (world px, its centre, and the
-   *  z it sorts at), shown while the mail's turn runs and at least `mailNoteMinSec`. */
-  mailNote?: { x: number; y: number; zY: number; color: string };
-  mailNoteMinSec?: number;
+  /** A walk to hand over (or take) work (mail.ts): to the tile beside the other
+   *  agent, stand there facing it for `waitSec`, then on (characters.ts runMailVisit).
+   *  `errand`: the note this walk carries, laid on arrival. */
+  mailVisit?: {
+    col: number;
+    row: number;
+    dir: Direction;
+    waitSec: number;
+    arrived: boolean;
+    errand?: MailErrand;
+  };
+  /** Notes this agent still has to carry, in order (it walks them one by one). */
+  mailRun?: MailErrand[];
+  /** Notes on this agent's desk: work given to it, and work back for review (its tray). */
+  deskNotes?: DeskNote[];
+  /** Where those notes lie: the desk its seat faces (world px, and the z they sort at). */
+  deskSpot?: { x: number; y: number; zY: number };
 }
 
 export const PetState = { IDLE: 'idle', WALK: 'walk', FOLLOW: 'follow' } as const;

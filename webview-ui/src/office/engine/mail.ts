@@ -1,9 +1,19 @@
 /**
- * Mail between sessions: when one session's message starts another's turn (the
- * server's agentStatus `messageFrom`), an envelope flies from the sender's
- * character to the receiver's, the receiver walks over to the sender to take
- * the work and back to its desk, a note in the sender's colour sits on the
- * receiver's desk while the turn runs, and its label says who sent it. DOM-free.
+ * Mail between sessions: one session's message to another (the server's
+ * agentStatus `messageFrom` on the receiver's turn start) as office work that
+ * changes hands, for every pair of sessions. DOM-free.
+ *
+ * The work cycle (mode 'carry', the default):
+ *  - Assign: A's message to B. A's cat carries a note in A's colour to B's desk
+ *    and walks back; B keeps working in its chair. The note lies on B's desk.
+ *  - Return: B's message back to A. B's cat picks A's note up off its desk and
+ *    carries it to A's desk, onto A's review tray.
+ *  - Review: the tray's notes go when A's turn that read them ends.
+ *  - Any note goes after the timeout (minutes, a setting), in case nobody answers.
+ * A walker who is busy walking queues the errand; one with a long queue, asleep,
+ * or not in the office hands the note over at once. Mode 'visit' has the
+ * receiver walk to the sender instead; 'envelope' only flies an envelope.
+ * Every mode lays the notes and flies the envelope when nobody walks.
  */
 
 import {
@@ -13,23 +23,28 @@ import {
   MAIL_HEAD_RISE_PX,
   MAIL_NOTE_COLORS,
   MAIL_NOTE_MIN_SEC,
-  MAIL_VISIT_WAIT_SEC,
+  MAIL_NOTE_TIMEOUT_DEFAULT_MIN,
 } from '../../constants.js';
-import type { Character, Direction } from '../types.js';
+import type { Character, DeskNote, Direction } from '../types.js';
 import { Direction as Dir } from '../types.js';
 
-type MailFields = Pick<
-  Character,
-  | 'x'
-  | 'y'
-  | 'mailFrom'
-  | 'mailFlightSec'
-  | 'mailFromX'
-  | 'mailFromY'
-  | 'mailVisit'
-  | 'mailNote'
-  | 'mailNoteMinSec'
->;
+/** How work changes hands in the office (Settings → Handing Over Work). */
+export type MailMode = 'carry' | 'visit' | 'envelope';
+export const MAIL_MODES: readonly MailMode[] = ['carry', 'visit', 'envelope'];
+
+let mode: MailMode = 'carry';
+let timeoutSec = MAIL_NOTE_TIMEOUT_DEFAULT_MIN * 60;
+
+export function setMailMode(next: MailMode): void {
+  mode = MAIL_MODES.includes(next) ? next : 'carry';
+}
+export function getMailMode(): MailMode {
+  return mode;
+}
+/** Notes left this long (minutes) go by themselves. */
+export function setMailNoteTimeoutMin(min: number): void {
+  if (Number.isFinite(min) && min > 0) timeoutSec = min * 60;
+}
 
 /** A sender's note colour: the same name always gets the same colour. */
 export function mailNoteColor(name: string): string {
@@ -38,11 +53,8 @@ export function mailNoteColor(name: string): string {
   return MAIL_NOTE_COLORS[h % MAIL_NOTE_COLORS.length];
 }
 
-/** What the office worked out for this mail: where to stand by the sender, where the desk is. */
-export interface MailPlan {
-  visit?: { col: number; row: number; dir: Direction };
-  note?: { x: number; y: number; zY: number };
-}
+const same = (a: string | undefined, b: string | undefined) =>
+  (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase() && !!(a ?? '').trim();
 
 /** The sender among `characters`: a main agent (not a helper) titled `name`, ignoring case. */
 export function findMailSender<C extends Pick<Character, 'id' | 'title' | 'isSubagent'>>(
@@ -50,60 +62,93 @@ export function findMailSender<C extends Pick<Character, 'id' | 'title' | 'isSub
   name: string,
   receiverId: number,
 ): C | null {
-  const want = name.trim().toLowerCase();
-  if (!want) return null;
+  if (!name.trim()) return null;
   for (const ch of characters) {
     if (ch.id === receiverId || ch.isSubagent) continue;
-    if ((ch.title ?? '').trim().toLowerCase() === want) return ch;
+    if (same(ch.title, name)) return ch;
   }
   return null;
 }
 
+let nextNoteId = 1;
+
 /**
- * A turn started: `from` is the sending session's name ('' = the user). Mail
- * from a session flies from `sender` (null: drops in from above the receiver).
+ * What a message from `sender` (named `from`) to `receiver` hands over: a new
+ * work note in the sender's colour, or, when the sender's desk holds work the
+ * receiver gave it, that note coming back for review.
  */
-export function receiveMail(
-  receiver: MailFields,
+export function mailHandover(
+  receiver: Pick<Character, 'title'>,
   from: string,
+  sender: Pick<Character, 'deskNotes'> | null,
+): { note: DeskNote; returning: DeskNote | null } {
+  const returning =
+    sender?.deskNotes?.find((n) => n.kind === 'work' && same(n.from, receiver.title)) ?? null;
+  const note: DeskNote = returning
+    ? { ...returning, id: nextNoteId++, kind: 'review', ageSec: 0, minSec: MAIL_NOTE_MIN_SEC, read: false }
+    : {
+        id: nextNoteId++,
+        from,
+        color: mailNoteColor(from),
+        kind: 'work',
+        ageSec: 0,
+        minSec: MAIL_NOTE_MIN_SEC,
+        read: false,
+      };
+  return { note, returning };
+}
+
+/** Lay `note` on `ch`'s desk (a review note on the tray). A review note that arrives
+ *  after its reader's turn already ended counts as read: it goes once seen a while. */
+export function layNote(ch: Pick<Character, 'deskNotes' | 'isActive'>, note: DeskNote): void {
+  if (note.kind === 'review' && !ch.isActive) note.read = true;
+  ch.deskNotes = [...(ch.deskNotes ?? []), note];
+}
+
+/** Take note `id` off `ch`'s desk (picked up to be carried back). */
+export function takeNote(ch: Pick<Character, 'deskNotes'>, id: number): void {
+  if (!ch.deskNotes) return;
+  ch.deskNotes = ch.deskNotes.filter((n) => n.id !== id);
+}
+
+/** A turn started: `from` names the session that sent it ('' = the user). */
+export function receiveMail(receiver: Pick<Character, 'mailFrom'>, from: string): void {
+  receiver.mailFrom = from || undefined;
+}
+
+/** Envelope from `sender` (null: drops in from above) to the receiver. */
+export function flyMail(
+  receiver: Pick<Character, 'x' | 'y' | 'mailFlightSec' | 'mailFromX' | 'mailFromY'>,
   sender: Pick<Character, 'x' | 'y'> | null,
-  plan: MailPlan = {},
 ): void {
-  if (!from) {
-    receiver.mailFrom = undefined;
-    return;
-  }
-  receiver.mailFrom = from;
   receiver.mailFlightSec = MAIL_FLIGHT_SEC;
   receiver.mailFromX = sender ? sender.x : receiver.x;
   receiver.mailFromY = sender
     ? sender.y - MAIL_HEAD_RISE_PX
     : receiver.y - MAIL_HEAD_RISE_PX - MAIL_DROP_PX;
-  // Walk over to take the work (only from a sender who is here to visit).
-  receiver.mailVisit = sender && plan.visit
-    ? { ...plan.visit, waitSec: MAIL_VISIT_WAIT_SEC, arrived: false }
-    : undefined;
-  if (plan.note) {
-    receiver.mailNote = { ...plan.note, color: mailNoteColor(from) };
-    receiver.mailNoteMinSec = MAIL_NOTE_MIN_SEC;
-  }
 }
 
-/** The turn ended: the label goes, the note once it has had its minimum time
- *  (mail still in the air finishes its flight, a visit under way finishes too:
- *  a quick reply must not cut the walk short). */
-export function endMailTurn(receiver: MailFields): void {
-  receiver.mailFrom = undefined;
-  if ((receiver.mailNoteMinSec ?? 0) <= 0) receiver.mailNote = undefined;
+/** The turn ended: the label goes, and the review notes it read are done with. */
+export function endMailTurn(ch: Pick<Character, 'mailFrom' | 'deskNotes'>): void {
+  ch.mailFrom = undefined;
+  if (!ch.deskNotes) return;
+  for (const n of ch.deskNotes) if (n.kind === 'review') n.read = true;
+  ch.deskNotes = ch.deskNotes.filter((n) => !(n.read && n.minSec <= 0));
 }
 
-export function tickMail(ch: MailFields, dt: number): void {
-  if (ch.mailNoteMinSec !== undefined) {
-    ch.mailNoteMinSec -= dt;
-    if (ch.mailNoteMinSec <= 0) {
-      ch.mailNoteMinSec = undefined;
-      if (!ch.mailFrom) ch.mailNote = undefined;
+export function tickMail(
+  ch: Pick<Character, 'deskNotes' | 'mailFlightSec' | 'mailFromX' | 'mailFromY'>,
+  dt: number,
+): void {
+  if (ch.deskNotes?.length) {
+    for (const n of ch.deskNotes) {
+      n.ageSec += dt;
+      n.minSec -= dt;
     }
+    const kept = ch.deskNotes.filter(
+      (n) => n.ageSec < timeoutSec && !(n.kind === 'review' && n.read && n.minSec <= 0),
+    );
+    if (kept.length !== ch.deskNotes.length) ch.deskNotes = kept;
   }
   if (ch.mailFlightSec === undefined) return;
   ch.mailFlightSec -= dt;
@@ -145,7 +190,9 @@ export function deskTileOf(seat: { seatCol: number; seatRow: number; facingDir: 
 
 /** Where the envelope is now (world px, its centre), or null with none in flight.
  *  It heads for the receiver's head wherever the receiver has walked to. */
-export function mailPoint(ch: MailFields): { x: number; y: number } | null {
+export function mailPoint(
+  ch: Pick<Character, 'x' | 'y' | 'mailFlightSec' | 'mailFromX' | 'mailFromY'>,
+): { x: number; y: number } | null {
   if (ch.mailFlightSec === undefined || ch.mailFromX === undefined || ch.mailFromY === undefined) {
     return null;
   }

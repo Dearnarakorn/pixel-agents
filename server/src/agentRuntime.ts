@@ -44,7 +44,11 @@ import { assignPaletteIfNeeded } from './paletteAssigner.js';
 import { PathSet, pathsMatch } from './pathKey.js';
 import { SessionRouter } from './sessionRouter.js';
 import { SubagentWatch } from './subagentWatch.js';
-import { cancelPermissionTimer, cancelWaitingTimer } from './timerManager.js';
+import {
+  cancelPermissionTimer,
+  cancelWaitingTimer,
+  setPermissionGuessGate,
+} from './timerManager.js';
 import {
   endBackgroundSpawn,
   setBackgroundAgentCompletedCallback,
@@ -100,6 +104,10 @@ export class AgentRuntime {
     setHookProvider(provider);
     // Labels show the conversation title: every agentStatus carries it.
     attachTitlesToStatus(store);
+    // With hooks on, a real permission prompt arrives as a PermissionRequest hook:
+    // never guess one from a long-running tool (an agent restored after a server
+    // restart sends no hook until its turn ends, so it would read "Needs approval").
+    setPermissionGuessGate(() => !this.hooksEnabled.current);
     setFileWatcherHookProvider(provider);
     this.subagentWatch = new SubagentWatch(store);
     setSubagentWatch(this.subagentWatch);
