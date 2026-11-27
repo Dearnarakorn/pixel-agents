@@ -10,6 +10,7 @@ import {
   TOOL_DONE_DELAY_MS,
 } from './constants.js';
 import { updateContextUsage } from './contextUsage.js';
+import { isCopiedRecord } from './copiedHistory.js';
 import { hasInlineTeammates, hasPromotedBackgroundAgent } from './teamUtils.js';
 import {
   cancelPermissionTimer,
@@ -180,6 +181,8 @@ export function processTranscriptLine(
   agent.linesProcessed++;
   try {
     const record = JSON.parse(line);
+    // A fork's copy of its parent's history: none of it happened in this session.
+    if (isCopiedRecord(agent.jsonlFile, record)) return;
     // Background agents' completion notices, as the provider reads them.
     const spawnNotices = hookProvider?.team?.readSpawnNotices?.(record) ?? null;
 

@@ -11,6 +11,7 @@
 import * as fs from 'fs';
 
 import type { HookProvider } from '../../core/src/provider.js';
+import { isCopiedRecord } from './copiedHistory.js';
 import type { AgentState } from './types.js';
 
 /** How much of a transcript's end is read for the work still open when watching starts. */
@@ -175,6 +176,7 @@ export function seedWorkFrom(agent: AgentState, provider: HookProvider | null | 
       continue;
     }
     if (record.isSidechain === true) continue;
+    if (isCopiedRecord(agent.jsonlFile, record)) continue; // a fork's copy of its parent's
     const content = record.message?.content ?? record.content;
     if (record.type === 'user') {
       const promptText =

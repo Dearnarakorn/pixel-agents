@@ -390,6 +390,42 @@ describe('transcriptParser: messages from other sessions', () => {
     ]);
   });
 
+  it("ignores a fork's copy of its parent's history", () => {
+    const own = '3f78b8ba-55db-4209-82d5-d4f368c3669a';
+    agents.get(1)!.jsonlFile = `/test/${own}.jsonl`;
+    const parent = 'b3f293c4-8fbc-43ae-9a22-cb1714193eb7';
+    processTranscriptLine(
+      1,
+      JSON.stringify({
+        type: 'user',
+        sessionId: parent,
+        isMeta: true,
+        message: {
+          content:
+            '<cross-session-message from="local_e" from-name="Engineer">done</cross-session-message>',
+        },
+      }),
+      agents,
+      waitingTimers,
+      permissionTimers,
+    );
+    processTranscriptLine(
+      1,
+      JSON.stringify({
+        type: 'assistant',
+        sessionId: parent,
+        message: {
+          content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'ls' } }],
+        },
+      }),
+      agents,
+      waitingTimers,
+      permissionTimers,
+    );
+    expect(messages).toEqual([]);
+    expect(agents.get(1)!.activeToolIds.size).toBe(0);
+  });
+
   it('reads the desktop app’s real shape: a lead-in line before the tag', () => {
     processTranscriptLine(
       1,

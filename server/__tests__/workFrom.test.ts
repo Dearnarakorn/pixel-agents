@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 
+import { isCopiedRecord } from '../src/copiedHistory.js';
 import { claudeProvider } from '../src/providers/hook/claude/claude.js';
 import type { AgentState } from '../src/types.js';
 import {
@@ -148,5 +149,42 @@ describe('work handed between sessions', () => {
     seedWorkFrom(agent, claudeProvider);
     expect(openWork(agent)).toEqual(['Boss']);
     fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("ignores a fork's copy of its parent's history", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pxl-work-'));
+    const own = '3f78b8ba-55db-4209-82d5-d4f368c3669a';
+    const parent = 'b3f293c4-8fbc-43ae-9a22-cb1714193eb7';
+    const file = path.join(dir, `${own}.jsonl`);
+    const message = (sessionId: string, name: string, from: string) =>
+      JSON.stringify({ type: 'user', sessionId, message: { content: prompt(name, from) } });
+    const title = JSON.stringify({ type: 'custom-title', sessionId: own });
+    // Copied from the parent: a report the parent got, not work for the fork.
+    const lines = [message(parent, 'Engineer', 'local_e'), title];
+    fs.writeFileSync(file, lines.join('\n') + '\n');
+    const agent = { jsonlFile: file } as AgentState;
+    seedWorkFrom(agent, claudeProvider);
+    expect(openWork(agent)).toEqual([]);
+    // Work the fork itself is given still counts.
+    fs.appendFileSync(file, message(own, 'Boss', BOSS) + '\n');
+    seedWorkFrom(agent, claudeProvider);
+    expect(openWork(agent)).toEqual(['Boss']);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe('isCopiedRecord', () => {
+  const own = '3f78b8ba-55db-4209-82d5-d4f368c3669a';
+  const file = path.join('projects', 'x', `${own}.jsonl`);
+  it('marks records of another session in a session transcript', () => {
+    expect(isCopiedRecord(file, { sessionId: 'b3f293c4-8fbc-43ae-9a22-cb1714193eb7' })).toBe(true);
+    expect(isCopiedRecord(file, { sessionId: own })).toBe(false);
+    expect(isCopiedRecord(file, { sessionId: own.toUpperCase() })).toBe(false);
+    expect(isCopiedRecord(file, { type: 'file-history-snapshot' })).toBe(false); // no id: kept
+  });
+  it("leaves background agents' transcripts alone (they carry the lead's id)", () => {
+    const sub = path.join('projects', 'x', own, 'subagents', 'agent-a1b2c3.jsonl');
+    expect(isCopiedRecord(sub, { sessionId: 'b3f293c4-8fbc-43ae-9a22-cb1714193eb7' })).toBe(false);
+    expect(isCopiedRecord(undefined, { sessionId: own })).toBe(false);
   });
 });
